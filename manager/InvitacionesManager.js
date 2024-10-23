@@ -1,7 +1,6 @@
 // /manager/InvitacionesManager.js
-const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore');
-const nodemailer = require('nodemailer'); // Importa Nodemailer
-const admin = require('firebase-admin'); // Asegúrate de tener configurado Firebase Admin
+const { getFirestore, collection, addDoc, getDocs, doc, getDoc } = require('firebase/firestore');
+const EmailManager = require('./EmailManager'); // Importa el EmailManager para enviar correos
 
 // Clase para gestionar las invitaciones
 class InvitacionesManager {
@@ -9,20 +8,16 @@ class InvitacionesManager {
         // Inicializa Firestore
         this.db = getFirestore();
         this.collectionName = 'invitaciones'; // Nombre de la colección en Firestore
-        
-        // Configura el transporte de Nodemailer
-        this.transporter = nodemailer.createTransport({
-            service: 'gmail', // Puedes usar otro servicio como SendGrid o Mailgun
-            auth: {
-                user: 'tu_correo@gmail.com', // Tu correo electrónico
-                pass: 'tu_contraseña', // Tu contraseña (considera usar OAuth2 o un "App Password" para mayor seguridad)
-            },
-        });
     }
 
-    // Función para crear una nueva invitación
-    async crearInvitacion(data) {
+    // Función para crear una nueva invitación (solo el administrador puede hacerlo)
+    async crearInvitacion(data, usuario) {
         // Validaciones
+        // Verifica que el usuario sea el administrador
+        if (!usuario || usuario.rol !== 'administrador') {
+            throw new Error('Solo el administrador puede crear invitaciones.');
+        }
+
         // 1. Verificar que el correo esté presente y tenga un formato válido
         if (!data.correo || typeof data.correo !== 'string' || !/\S+@\S+\.\S+/.test(data.correo)) {
             throw new Error('El correo es obligatorio y debe tener un formato válido.');
@@ -41,35 +36,16 @@ class InvitacionesManager {
         try {
             // Añade un nuevo documento a la colección de invitaciones
             const nuevaInvitacion = await addDoc(collection(this.db, this.collectionName), data);
-            // Envía el correo electrónico con la invitación
-            await this.enviarInvitacion(data.correo, data.asunto, data.mensaje);
+
+            // Envía el correo electrónico con la invitación usando el EmailManager
+            await EmailManager.enviarCorreo(data.correo, data.asunto, data.mensaje);
+
             // Retorna el ID de la nueva invitación junto con los datos
             return { id: nuevaInvitacion.id, ...data };
         } catch (error) {
             // Manejo de errores al crear la invitación
             throw new Error('Error al crear la invitación: ' + error.message);
         }
-    }
-
-    // Función para enviar la invitación por correo electrónico
-    async enviarInvitacion(correoDestino, asunto, mensaje) {
-        // Configura los detalles del correo electrónico
-        const mailOptions = {
-            from: 'tu_correo@gmail.com', // El correo desde el cual envías
-            to: correoDestino, // El correo del destinatario
-            subject: asunto, // Asunto del correo
-            text: mensaje, // Mensaje del correo
-        };
-
-        // Envía el correo
-        return new Promise((resolve, reject) => {
-            this.transporter.sendMail(mailOptions, (error, info) => {
-                if (error) {
-                    return reject('Error al enviar la invitación: ' + error.message);
-                }
-                resolve('Invitación enviada: ' + info.response);
-            });
-        });
     }
 
     // Función para listar todas las invitaciones
@@ -98,41 +74,6 @@ class InvitacionesManager {
             }
         } catch (error) {
             throw new Error('Error al obtener la invitación: ' + error.message);
-        }
-    }
-
-    // Función para actualizar una invitación
-    async actualizarInvitacion(id, data) {
-        try {
-            // Validaciones para la actualización
-            if (data.correo && (typeof data.correo !== 'string' || !/\S+@\S+\.\S+/.test(data.correo))) {
-                throw new Error('El correo es obligatorio y debe tener un formato válido.');
-            }
-
-            if (data.asunto && typeof data.asunto !== 'string') {
-                throw new Error('El asunto debe ser una cadena de texto.');
-            }
-
-            if (data.mensaje && typeof data.mensaje !== 'string') {
-                throw new Error('El mensaje debe ser una cadena de texto.');
-            }
-
-            const docRef = doc(this.db, this.collectionName, id);
-            await updateDoc(docRef, data);
-            return { id, ...data }; // Retorna el ID y los nuevos datos
-        } catch (error) {
-            throw new Error('Error al actualizar la invitación: ' + error.message);
-        }
-    }
-
-    // Función para eliminar una invitación
-    async eliminarInvitacion(id) {
-        try {
-            const docRef = doc(this.db, this.collectionName, id);
-            await deleteDoc(docRef);
-            return { mensaje: 'Invitación eliminada con éxito' };
-        } catch (error) {
-            throw new Error('Error al eliminar la invitación: ' + error.message);
         }
     }
 }

@@ -1,10 +1,8 @@
-// DocumentosManager.js
-
 const { getFirestore, collection, addDoc, getDocs, doc, getDoc, deleteDoc } = require('firebase/firestore'); // Importar funciones de Firestore
 const db = getFirestore(); // Inicializar Firestore
 
 class DocumentosManager {
-    // Método para subir un nuevo documento
+    // Método para subir un nuevo documento (solo para administradores)
     static async subirDocumento(documento) {
         this.validarDocumento(documento); // Validaciones
         
@@ -22,7 +20,7 @@ class DocumentosManager {
         }
     }
 
-    // Método para listar todos los documentos
+    // Método para listar todos los documentos (accesible para todos)
     static async listarDocumentos() {
         try {
             const snapshot = await getDocs(collection(db, 'documentos'));
@@ -32,7 +30,7 @@ class DocumentosManager {
         }
     }
 
-    // Método para obtener un documento específico por ID
+    // Método para obtener un documento específico por ID (accesible para todos)
     static async obtenerDocumentoPorId(id) {
         try {
             const documentoRef = doc(db, 'documentos', id);
@@ -46,7 +44,7 @@ class DocumentosManager {
         }
     }
 
-    // Método para eliminar un documento
+    // Método para eliminar un documento (solo para administradores)
     static async eliminarDocumento(id) {
         try {
             const documentoRef = doc(db, 'documentos', id);

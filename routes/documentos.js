@@ -1,8 +1,11 @@
 // /routes/documentos.js
+require('dotenv').config(); // Cargar variables de entorno
+
 const express = require('express');
 const router = express.Router();
 const DocumentosManager = require('../manager/DocumentosManager');
-const verifyAdmin = require('../middleware/verifyAdmin');
+const authenticateUser = require('../middleware/authenticateUser'); // Middleware para autenticación
+const verifyAdmin = require('../middleware/verifyAdmin'); // Middleware para verificar si es administrador
 const multer = require('multer');
 
 // Configuración de Multer
@@ -18,7 +21,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Ruta para crear un nuevo documento
-router.post('/', verifyAdmin, upload.single('documento'), async (req, res) => {
+router.post('/', authenticateUser, verifyAdmin, upload.single('documento'), async (req, res) => {
     try {
         const nuevoDocumento = await DocumentosManager.crearDocumento(req.body);
         if (req.file) {
@@ -30,8 +33,8 @@ router.post('/', verifyAdmin, upload.single('documento'), async (req, res) => {
     }
 });
 
-// Ruta para obtener todos los documentos (sin verificación)
-router.get('/', async (req, res) => {
+// Ruta para obtener todos los documentos
+router.get('/', authenticateUser, async (req, res) => {
     try {
         const documentos = await DocumentosManager.obtenerDocumentos();
         res.status(200).json(documentos);
@@ -41,7 +44,7 @@ router.get('/', async (req, res) => {
 });
 
 // Ruta para obtener un documento por su ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateUser, async (req, res) => {
     try {
         const documento = await DocumentosManager.obtenerDocumentoPorId(req.params.id);
         res.status(200).json(documento);
@@ -51,7 +54,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Ruta para actualizar un documento
-router.put('/:id', verifyAdmin, upload.single('documento'), async (req, res) => {
+router.put('/:id', authenticateUser, verifyAdmin, upload.single('documento'), async (req, res) => {
     try {
         const documentoActualizado = await DocumentosManager.actualizarDocumento(req.params.id, req.body);
         if (req.file) {
@@ -64,7 +67,7 @@ router.put('/:id', verifyAdmin, upload.single('documento'), async (req, res) => 
 });
 
 // Ruta para eliminar un documento
-router.delete('/:id', verifyAdmin, async (req, res) => {
+router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     try {
         const mensaje = await DocumentosManager.eliminarDocumento(req.params.id);
         res.status(200).json(mensaje);

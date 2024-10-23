@@ -1,11 +1,16 @@
-// PagosManager.js
-
 const { getFirestore, collection, addDoc, getDocs, doc, getDoc, deleteDoc } = require('firebase/firestore'); // Importar funciones de Firestore
 const db = getFirestore(); // Inicializar Firestore
+const { enviarNotificacionPago } = require('../services/mailer'); // Importar la función para enviar correos
+const UsuariosManager = require('./UsuariosManager'); // Importar UsuariosManager para obtener el email del usuario
 
 class PagosManager {
     // Método para registrar un nuevo pago
-    static async registrarPago(pago) {
+    static async registrarPago(pago, archivo, esAdmin) {
+        // Solo el administrador puede registrar un pago
+        if (!esAdmin) {
+            throw new Error('Acceso no autorizado');
+        }
+
         this.validarPago(pago); // Validaciones
         
         try {
@@ -14,10 +19,24 @@ class PagosManager {
                 monto: pago.monto,                         // Monto del pago
                 fechaPago: pago.fechaPago,                 // Fecha en que se realiza el pago
                 estado: pago.estado,                       // Estado del pago (ej: "pendiente", "completado")
-                descripcion: pago.descripcion || ''         // Descripción opcional del pago
+                descripcion: pago.descripcion || '',        // Descripción opcional del pago
+                archivo: archivo ? archivo.filename : null // Almacenar el nombre del archivo si existe
             });
 
-            return { id: nuevoPagoRef.id, ...pago }; // Retornar el pago registrado con su ID
+            // Obtener el usuario correspondiente a la unidad funcional para notificarle sobre el pago
+            const usuario = await UsuariosManager.obtenerUsuarioPorId(pago.idUnidadFuncional);
+
+            // Enviar notificación por correo
+            if (usuario && usuario.email) {
+                await enviarNotificacionPago(usuario.email, {
+                    monto: pago.monto,
+                    fechaPago: pago.fechaPago,
+                    estado: pago.estado,
+                    descripcion: pago.descripcion
+                });
+            }
+
+            return { id: nuevoPagoRef.id, ...pago, archivo: archivo ? archivo.filename : null }; // Retornar el pago registrado con su ID
         } catch (error) {
             throw new Error(`Error al registrar el pago: ${error.message}`);
         }
@@ -48,7 +67,12 @@ class PagosManager {
     }
 
     // Método para eliminar un pago
-    static async eliminarPago(id) {
+    static async eliminarPago(id, esAdmin) {
+        // Solo el administrador puede eliminar pagos
+        if (!esAdmin) {
+            throw new Error('Acceso no autorizado');
+        }
+
         try {
             const pagoRef = doc(db, 'pagos', id);
             await deleteDoc(pagoRef);
