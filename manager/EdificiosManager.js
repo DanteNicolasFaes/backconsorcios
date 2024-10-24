@@ -15,7 +15,14 @@ class EdificiosManager {
             throw new Error('Acceso no autorizado');
         }
 
+        // Validar los campos requeridos
+        const { nombre, direccion, cantidadUnidades } = data;
+        if (!nombre || !direccion || !cantidadUnidades) {
+            throw new Error('Todos los campos son obligatorios: nombre, dirección y cantidad de unidades');
+        }
+
         try {
+            // Crear el edificio
             const nuevoEdificio = await addDoc(collection(this.db, this.collectionName), data);
 
             // Obtener el administrador para notificar sobre el nuevo edificio

@@ -22,6 +22,10 @@ const upload = multer({ storage });
 // Ruta para crear un nuevo documento
 router.post('/', authenticateUser, verifyAdmin, upload.single('documento'), async (req, res) => {
     try {
+        if (!req.file) {
+            return res.status(400).json({ mensaje: 'Archivo de documento no proporcionado' });
+        }
+
         const nuevoDocumento = await DocumentosManager.subirDocumento(req.body, req.file.path);
         res.status(201).json(nuevoDocumento);
     } catch (error) {
@@ -52,7 +56,9 @@ router.get('/:id', authenticateUser, async (req, res) => {
 // Ruta para actualizar un documento
 router.put('/:id', authenticateUser, verifyAdmin, upload.single('documento'), async (req, res) => {
     try {
-        const documentoActualizado = await DocumentosManager.actualizarDocumento(req.params.id, req.body, req.file ? req.file.path : null);
+        const archivoRuta = req.file ? req.file.path : null;
+
+        const documentoActualizado = await DocumentosManager.actualizarDocumento(req.params.id, req.body, archivoRuta);
         res.status(200).json(documentoActualizado);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });

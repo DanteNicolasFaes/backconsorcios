@@ -4,7 +4,7 @@ const db = getFirestore(); // Inicializar Firestore
 class DocumentosManager {
     // Método para subir un nuevo documento (solo para administradores)
     static async subirDocumento(documento, archivoRuta) {
-        this.validarDocumento(documento); // Validaciones
+        this.validarDocumento(documento, archivoRuta); // Validaciones
 
         try {
             const nuevoDocumentoRef = await addDoc(collection(db, 'documentos'), {
@@ -70,7 +70,7 @@ class DocumentosManager {
     }
 
     // Método para validar un documento
-    static validarDocumento(documento) {
+    static validarDocumento(documento, archivoRuta) {
         // 1. Verificar que la categoría esté presente y sea una cadena de texto
         if (!documento.categoria || typeof documento.categoria !== 'string') {
             throw new Error('La categoría es obligatoria y debe ser una cadena de texto.');
@@ -81,11 +81,11 @@ class DocumentosManager {
             throw new Error('La fecha es obligatoria y debe tener un formato válido.');
         }
 
-        // 3. Verificar que el archivo esté presente y sea una cadena de texto
-        if (!documento.archivo && !documento.archivoRuta) {
+        // 3. Verificar que el archivo esté presente
+        if (!archivoRuta) {
             throw new Error('El archivo es obligatorio.');
         }
     }
 }
 
-module.exports = DocumentosManager; // Exportar la clase para usarla en otros módulos
+module.exports = DocumentosManager;

@@ -1,4 +1,3 @@
-// /routes/email.js
 const express = require('express');
 const router = express.Router();
 const EmailManager = require('../manager/EmailManager');
@@ -19,14 +18,17 @@ router.post('/enviar', authenticateUser, verifyAdmin, upload.single('archivo'), 
     const archivoAdjunto = req.file ? req.file.path : null; // Guarda la ruta del archivo, si existe
 
     try {
-        const resultado = await EmailManager.enviarCorreo(destinatario, asunto, mensaje, archivoAdjunto); // Enviar correo
-        res.status(200).json(resultado);
+        // Enviar correo utilizando EmailManager
+        const resultado = await EmailManager.enviarCorreo(destinatario, asunto, mensaje, archivoAdjunto);
+        return res.status(200).json(resultado); // Respuesta exitosa
     } catch (error) {
         // Manejar errores específicos si es necesario
         if (error.message.includes('formato válido')) {
             return res.status(400).json({ mensaje: error.message }); // Error de formato de correo
         }
-        res.status(500).json({ mensaje: 'Error al enviar el correo: ' + error.message }); // Error general
+        // Manejar errores de envío de correo
+        console.error('Error al enviar el correo: ', error); // Log de error
+        return res.status(500).json({ mensaje: 'Error al enviar el correo: ' + error.message }); // Error general
     }
 });
 

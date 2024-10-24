@@ -23,10 +23,13 @@ const upload = multer({ storage });
 // Ruta para crear un nuevo edificio
 router.post('/', authenticateUser, verifyAdmin, upload.single('documento'), async (req, res) => {
     try {
-        const nuevoEdificio = await EdificiosManager.crearEdificio(req.body);
+        const esAdmin = req.user && req.user.esAdmin; // Verificar si el usuario es administrador
+        const nuevoEdificio = await EdificiosManager.crearEdificio(req.body, esAdmin);
+
         if (req.file) {
             nuevoEdificio.documento = req.file.path; // Agrega la ruta del archivo si se subió
         }
+
         res.status(201).json(nuevoEdificio);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
