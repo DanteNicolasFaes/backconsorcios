@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
         cb(null, 'uploads/'); // Carpeta donde se guardarán los archivos
     },
     filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname); // Renombrar el archivo
+        cb(null, `${Date.now()}-${file.originalname}`); // Renombrar el archivo
     },
 });
 
@@ -23,18 +23,17 @@ const upload = multer({ storage: storage });
 // Ruta para crear un nuevo pago
 router.post('/', authenticateUser, verifyAdmin, upload.single('archivo'), async (req, res) => {
     try {
-        const nuevoPago = await PagosManager.crearPago(req.body, req.file); // Pasar req.file
+        const nuevoPago = await PagosManager.registrarPago(req.body, req.file, req.user.isAdmin); // Pasar req.file y el estado de administrador
         res.status(201).json(nuevoPago);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
     }
 });
 
-
 // Ruta para obtener todos los pagos
 router.get('/', authenticateUser, async (req, res) => {
     try {
-        const pagos = await PagosManager.obtenerPagos();
+        const pagos = await PagosManager.listarPagos(); // Cambiado a listarPagos
         res.status(200).json(pagos);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
@@ -54,7 +53,7 @@ router.get('/:id', authenticateUser, async (req, res) => {
 // Ruta para actualizar un pago
 router.put('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     try {
-        const pagoActualizado = await PagosManager.actualizarPago(req.params.id, req.body);
+        const pagoActualizado = await PagosManager.actualizarPago(req.params.id, req.body, req.user.isAdmin); // Asegurarse de pasar el estado de admin
         res.status(200).json(pagoActualizado);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
@@ -64,11 +63,11 @@ router.put('/:id', authenticateUser, verifyAdmin, async (req, res) => {
 // Ruta para eliminar un pago
 router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     try {
-        const mensaje = await PagosManager.eliminarPago(req.params.id);
+        const mensaje = await PagosManager.eliminarPago(req.params.id, req.user.isAdmin); // Pasar el estado de admin
         res.status(200).json(mensaje);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
     }
 });
 
-module.exports = router;
+module.exports = router; // Exportar el router para usarlo en otros módulos

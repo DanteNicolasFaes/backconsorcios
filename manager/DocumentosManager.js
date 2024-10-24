@@ -1,20 +1,20 @@
-const { getFirestore, collection, addDoc, getDocs, doc, getDoc, deleteDoc } = require('firebase/firestore'); // Importar funciones de Firestore
+const { getFirestore, collection, addDoc, getDocs, doc, getDoc, deleteDoc, updateDoc } = require('firebase/firestore'); // Importar funciones de Firestore
 const db = getFirestore(); // Inicializar Firestore
 
 class DocumentosManager {
     // Método para subir un nuevo documento (solo para administradores)
-    static async subirDocumento(documento) {
+    static async subirDocumento(documento, archivoRuta) {
         this.validarDocumento(documento); // Validaciones
-        
+
         try {
             const nuevoDocumentoRef = await addDoc(collection(db, 'documentos'), {
-                categoria: documento.categoria, // Categoría del documento
+                categoria: documento.categoria,   // Categoría del documento
                 fecha: documento.fecha,           // Fecha de subida del documento
-                archivo: documento.archivo,       // Ruta o URL del archivo
+                archivo: archivoRuta,             // Ruta del archivo subida por Multer
                 descripcion: documento.descripcion || '' // Descripción opcional del documento
             });
 
-            return { id: nuevoDocumentoRef.id, ...documento }; // Retornar el documento registrado con su ID
+            return { id: nuevoDocumentoRef.id, ...documento, archivo: archivoRuta }; // Retornar el documento registrado con su ID y ruta del archivo
         } catch (error) {
             throw new Error(`Error al subir el documento: ${error.message}`);
         }
@@ -44,6 +44,20 @@ class DocumentosManager {
         }
     }
 
+    // Método para actualizar un documento (solo para administradores)
+    static async actualizarDocumento(id, datosActualizados, archivoRuta) {
+        try {
+            const documentoRef = doc(db, 'documentos', id);
+            await updateDoc(documentoRef, {
+                ...datosActualizados,
+                ...(archivoRuta && { archivo: archivoRuta }) // Actualiza la ruta del archivo si se proporciona
+            });
+            return { message: 'Documento actualizado con éxito' }; // Mensaje de éxito
+        } catch (error) {
+            throw new Error(`Error al actualizar el documento: ${error.message}`);
+        }
+    }
+
     // Método para eliminar un documento (solo para administradores)
     static async eliminarDocumento(id) {
         try {
@@ -68,8 +82,8 @@ class DocumentosManager {
         }
 
         // 3. Verificar que el archivo esté presente y sea una cadena de texto
-        if (!documento.archivo || typeof documento.archivo !== 'string') {
-            throw new Error('El archivo es obligatorio y debe ser una cadena de texto.');
+        if (!documento.archivo && !documento.archivoRuta) {
+            throw new Error('El archivo es obligatorio.');
         }
     }
 }

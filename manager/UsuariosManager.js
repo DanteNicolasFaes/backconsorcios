@@ -1,34 +1,32 @@
 // /manager/UsuariosManager.js
 const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore');
 const admin = require('firebase-admin');
-const EmailManager = require('./EmailManager'); // Importamos el EmailManager
+const EmailManager = require('./EmailManager');
 
 class UsuariosManager {
     constructor() {
-        // Inicializa Firestore
         this.db = getFirestore();
-        this.collectionName = 'usuarios'; // Nombre de la colección en Firestore
+        this.collectionName = 'usuarios'; 
     }
 
     // Método para crear un nuevo usuario
     async crearUsuario(data, esAdmin, archivo) {
-        // Validación: solo el administrador puede crear un usuario
         if (!esAdmin) {
-            throw new Error('Acceso no autorizado'); // Error si no es administrador
+            throw new Error('Acceso no autorizado');
         }
 
         try {
             const nuevoUsuario = await addDoc(collection(this.db, this.collectionName), {
                 ...data,
-                archivoUrl: archivo ? archivo.path : null // Guardar la URL del archivo si se subió
+                archivoUrl: archivo ? archivo.path : null,
+                isAdmin: data.isAdmin || false // Guardar si es administrador
             });
 
-            // Enviar correo al nuevo usuario notificando sobre su creación
             await EmailManager.enviarCorreo(data.email, 'Bienvenido/a', `Hola ${data.nombre}, tu cuenta ha sido creada exitosamente.`);
 
-            return { id: nuevoUsuario.id, ...data, archivoUrl: archivo ? archivo.path : null }; // Retorna el nuevo usuario con su ID
+            return { id: nuevoUsuario.id, ...data, archivoUrl: archivo ? archivo.path : null }; 
         } catch (error) {
-            throw new Error('Error al crear el usuario: ' + error.message); // Manejo de errores
+            throw new Error('Error al crear el usuario: ' + error.message);
         }
     }
 
@@ -36,9 +34,9 @@ class UsuariosManager {
     async obtenerUsuarios() {
         try {
             const usuariosSnapshot = await getDocs(collection(this.db, this.collectionName));
-            return usuariosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); // Mapea los documentos a un array
+            return usuariosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); 
         } catch (error) {
-            throw new Error('Error al obtener los usuarios: ' + error.message); // Manejo de errores
+            throw new Error('Error al obtener los usuarios: ' + error.message);
         }
     }
 
@@ -47,48 +45,45 @@ class UsuariosManager {
         try {
             const usuarioDoc = await getDoc(doc(this.db, this.collectionName, id));
             if (!usuarioDoc.exists()) {
-                throw new Error('Usuario no encontrado'); // Error si el usuario no existe
+                throw new Error('Usuario no encontrado');
             }
-            return { id: usuarioDoc.id, ...usuarioDoc.data() }; // Retorna el usuario encontrado
+            return { id: usuarioDoc.id, ...usuarioDoc.data() }; 
         } catch (error) {
-            throw new Error('Error al obtener el usuario: ' + error.message); // Manejo de errores
+            throw new Error('Error al obtener el usuario: ' + error.message);
         }
     }
 
     // Método para actualizar la información de un usuario
     async actualizarUsuario(id, data, esAdmin, archivo) {
-        // Validación: solo el administrador puede actualizar un usuario
         if (!esAdmin) {
-            throw new Error('Acceso no autorizado'); // Error si no es administrador
+            throw new Error('Acceso no autorizado');
         }
 
         try {
             await updateDoc(doc(this.db, this.collectionName, id), {
                 ...data,
-                archivoUrl: archivo ? archivo.path : null // Actualiza la URL del archivo si se subió
+                archivoUrl: archivo ? archivo.path : null
             });
 
-            // Enviar correo al usuario notificando sobre la actualización
             await EmailManager.enviarCorreo(data.email, 'Actualización de Cuenta', `Hola ${data.nombre}, tu cuenta ha sido actualizada.`);
 
-            return { id, ...data, archivoUrl: archivo ? archivo.path : null }; // Retorna el usuario actualizado
+            return { id, ...data, archivoUrl: archivo ? archivo.path : null }; 
         } catch (error) {
-            throw new Error('Error al actualizar el usuario: ' + error.message); // Manejo de errores
+            throw new Error('Error al actualizar el usuario: ' + error.message);
         }
     }
 
     // Método para eliminar un usuario
     async eliminarUsuario(id, esAdmin) {
-        // Validación: solo el administrador puede eliminar un usuario
         if (!esAdmin) {
-            throw new Error('Acceso no autorizado'); // Error si no es administrador
+            throw new Error('Acceso no autorizado');
         }
 
         try {
             await deleteDoc(doc(this.db, this.collectionName, id));
-            return { mensaje: 'Usuario eliminado' }; // Mensaje de éxito
+            return { mensaje: 'Usuario eliminado' }; 
         } catch (error) {
-            throw new Error('Error al eliminar el usuario: ' + error.message); // Manejo de errores
+            throw new Error('Error al eliminar el usuario: ' + error.message);
         }
     }
 
@@ -97,19 +92,18 @@ class UsuariosManager {
         try {
             const usuariosSnapshot = await getDocs(collection(this.db, this.collectionName));
 
-            // Suponiendo que el administrador tiene un campo específico, por ejemplo, "rol" que indica si es admin
             const administrador = usuariosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                .find(usuario => usuario.rol === 'admin'); // Cambia 'rol' y 'admin' según tu implementación
+                .find(usuario => usuario.isAdmin); // Filtra por isAdmin
 
             if (!administrador) {
                 throw new Error('Administrador no encontrado');
             }
 
-            return administrador; // Retorna el objeto del administrador
+            return administrador; 
         } catch (error) {
-            throw new Error('Error al obtener el administrador: ' + error.message); // Manejo de errores
+            throw new Error('Error al obtener el administrador: ' + error.message);
         }
     }
 }
 
-module.exports = new UsuariosManager(); // Exporta una instancia de la clase
+module.exports = new UsuariosManager();

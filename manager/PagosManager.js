@@ -1,3 +1,4 @@
+// /manager/PagosManager.js
 const { getFirestore, collection, addDoc, getDocs, doc, getDoc, deleteDoc } = require('firebase/firestore'); // Importar funciones de Firestore
 const db = getFirestore(); // Inicializar Firestore
 const { enviarNotificacionPago } = require('../services/mailer'); // Importar la función para enviar correos
@@ -7,9 +8,7 @@ class PagosManager {
     // Método para registrar un nuevo pago
     static async registrarPago(pago, archivo, esAdmin) {
         // Solo el administrador puede registrar un pago
-        if (!esAdmin) {
-            throw new Error('Acceso no autorizado');
-        }
+        this.validarAcceso(esAdmin);
 
         this.validarPago(pago); // Validaciones
         
@@ -69,9 +68,7 @@ class PagosManager {
     // Método para eliminar un pago
     static async eliminarPago(id, esAdmin) {
         // Solo el administrador puede eliminar pagos
-        if (!esAdmin) {
-            throw new Error('Acceso no autorizado');
-        }
+        this.validarAcceso(esAdmin);
 
         try {
             const pagoRef = doc(db, 'pagos', id);
@@ -102,6 +99,13 @@ class PagosManager {
         // 4. Verificar que el estado esté presente y sea una cadena de texto
         if (!pago.estado || typeof pago.estado !== 'string') {
             throw new Error('El estado es obligatorio y debe ser una cadena de texto.');
+        }
+    }
+
+    // Método para validar acceso del administrador
+    static validarAcceso(esAdmin) {
+        if (!esAdmin) {
+            throw new Error('Acceso no autorizado');
         }
     }
 }
