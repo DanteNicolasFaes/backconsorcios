@@ -22,8 +22,8 @@ const upload = multer({ storage });
 // Ruta para crear una nueva queja
 router.post('/', authenticateUser, upload.single('archivo'), async (req, res) => {
     try {
-        const nuevaQueja = await QuejasManager.crearQueja(req.body, req.file); // Pasar el archivo al manager
-        res.status(201).json(nuevaQueja);
+        const nuevaQueja = await QuejasManager.crearQueja(req.body, req.file, req.body.unidadFuncionalId, req.body.esPropietario); // Pasar el archivo y otros parámetros al manager
+        res.status(201).json({ mensaje: 'Queja creada con éxito.', queja: nuevaQueja });
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
     }
@@ -53,7 +53,7 @@ router.get('/:id', authenticateUser, async (req, res) => {
 router.put('/:id', authenticateUser, verifyAdmin, upload.single('archivo'), async (req, res) => {
     try {
         const quejaActualizada = await QuejasManager.actualizarQueja(req.params.id, req.body, req.file); // Pasar el archivo al manager
-        res.status(200).json(quejaActualizada);
+        res.status(200).json({ mensaje: 'Queja actualizada con éxito.', queja: quejaActualizada });
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
     }
@@ -62,11 +62,11 @@ router.put('/:id', authenticateUser, verifyAdmin, upload.single('archivo'), asyn
 // Ruta para eliminar una queja
 router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     try {
-        const mensaje = await QuejasManager.eliminarQueja(req.params.id);
-        res.status(200).json(mensaje);
+        const mensaje = await QuejasManager.eliminarQueja(req.params.id, req.user.esAdmin);
+        res.status(200).json({ mensaje });
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
     }
 });
 
-module.exports = router;
+module.exports = router; // Exportar el router para usarlo en el servidor

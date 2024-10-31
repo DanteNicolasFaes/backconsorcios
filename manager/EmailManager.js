@@ -4,10 +4,12 @@ const nodemailer = require('nodemailer');
 const admin = require('firebase-admin'); // Importar Firebase Admin
 
 // Inicializa Firebase Admin con las credenciales adecuadas
-admin.initializeApp({
-    credential: admin.credential.applicationDefault(), // O usa admin.credential.cert(serviceAccount) si tienes un archivo de clave
-    databaseURL: process.env.FIREBASE_DATABASE_URL, // Asegúrate de tener esta variable en tu .env
-});
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.applicationDefault(), // O usa admin.credential.cert(serviceAccount) si tienes un archivo de clave
+        databaseURL: process.env.FIREBASE_DATABASE_URL, // Asegúrate de tener esta variable en tu .env
+    });
+}
 
 const db = admin.firestore(); // Obtener la referencia a Firestore
 
@@ -19,7 +21,6 @@ class EmailManager {
         const transportador = this.configurarTransportador(); // Configurar el transportador
         const opcionesCorreo = this.crearOpcionesCorreo(destinatario, asunto, mensaje, archivoAdjunto); // Crear opciones del correo
 
-        // Enviar el correo y gestionar errores
         try {
             const info = await transportador.sendMail(opcionesCorreo);
             console.log('Correo enviado: %s', info.messageId);

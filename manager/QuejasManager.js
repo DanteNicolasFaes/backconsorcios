@@ -1,5 +1,7 @@
+// /manager/QuejasManager.js
 const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore'); // Importar funciones de Firestore
 const { getStorage, ref, uploadBytes, getDownloadURL } = require('firebase/storage'); // Importar funciones de Firebase Storage
+
 const db = getFirestore(); // Inicializar Firestore
 const storage = getStorage(); // Inicializar Storage
 
@@ -7,45 +9,37 @@ class QuejasManager {
     // Método para crear una nueva queja
     static async crearQueja(queja, archivo, unidadFuncionalId, esPropietario) {
         // Validaciones
-        // 1. Verificar que el contenido de la queja esté presente y sea una cadena de texto
         if (!queja.contenido || typeof queja.contenido !== 'string') {
             throw new Error('El contenido de la queja es obligatorio y debe ser una cadena de texto.');
         }
-
-        // 2. Verificar que el ID de la unidad funcional esté presente
         if (!unidadFuncionalId) {
             throw new Error('El ID de la unidad funcional es obligatorio.');
         }
-
-        // 3. Validación: solo el propietario o inquilino puede crear una queja
         if (!esPropietario) {
-            throw new Error('Acceso no autorizado'); // Error si no es propietario o inquilino
+            throw new Error('Acceso no autorizado');
         }
 
-        // Intentar crear una nueva queja en la base de datos
         try {
             let archivoUrl = null; // Variable para almacenar la URL del archivo
 
             // Si se proporciona un archivo, subirlo a Firebase Storage
             if (archivo) {
-                const archivoRef = ref(storage, `quejas/${archivo.originalname}`); // Usar `originalname` para conservar el nombre del archivo
-                await uploadBytes(archivoRef, archivo.buffer); // Subir el archivo
-                archivoUrl = await getDownloadURL(archivoRef); // Obtener la URL del archivo
+                const archivoRef = ref(storage, `quejas/${archivo.originalname}`);
+                await uploadBytes(archivoRef, archivo.buffer);
+                archivoUrl = await getDownloadURL(archivoRef);
             }
 
             // Crear la queja en Firestore
             const nuevaQuejaRef = await addDoc(collection(db, 'quejas'), {
-                contenido: queja.contenido,                 // Contenido de la queja
-                unidadFuncionalId: unidadFuncionalId,       // ID de la unidad funcional asociada
-                estado: 'abierta',                           // Estado inicial de la queja
-                fechaCreacion: new Date().toISOString(),    // Fecha de creación de la queja
-                archivoUrl: archivoUrl                       // URL del archivo, si se subió
+                contenido: queja.contenido,
+                unidadFuncionalId: unidadFuncionalId,
+                estado: 'abierta',
+                fechaCreacion: new Date().toISOString(),
+                archivoUrl: archivoUrl
             });
 
-            // Retornar la queja registrada con su ID
             return { id: nuevaQuejaRef.id, ...queja, estado: 'abierta', archivoUrl };
         } catch (error) {
-            // Lanzar error si hay problemas al registrar la queja en la base de datos
             throw new Error('Error al crear la queja: ' + error.message);
         }
     }
@@ -53,9 +47,9 @@ class QuejasManager {
     // Método para listar todas las quejas
     static async obtenerQuejas() {
         try {
-            const snapshot = await getDocs(collection(db, 'quejas')); // Obtener todas las quejas de la colección 'quejas'
-            const quejas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); // Mapear las quejas a un formato más manejable
-            return quejas; // Retornar la lista de quejas
+            const snapshot = await getDocs(collection(db, 'quejas'));
+            const quejas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return quejas;
         } catch (error) {
             throw new Error('Error al listar las quejas: ' + error.message);
         }
@@ -64,46 +58,66 @@ class QuejasManager {
     // Método para obtener una queja específica por ID
     static async obtenerQuejaPorId(id) {
         try {
-            const quejaRef = doc(db, 'quejas', id); // Referencia a la queja específica
-            const quejaSnap = await getDoc(quejaRef); // Obtener la queja
+            const quejaRef = doc(db, 'quejas', id);
+            const quejaSnap = await getDoc(quejaRef);
             if (!quejaSnap.exists()) {
-                throw new Error('Queja no encontrada'); // Error si la queja no existe
+                throw new Error('Queja no encontrada');
             }
-            return { id: quejaSnap.id, ...quejaSnap.data() }; // Retornar la queja encontrada
+            return { id: quejaSnap.id, ...quejaSnap.data() };
         } catch (error) {
             throw new Error('Error al obtener la queja: ' + error.message);
         }
     }
 
+    // Método para actualizar una queja
+    static async actualizarQueja(id, datosActualizados, archivo) {
+        if (!id) throw new Error('El ID de la queja es obligatorio.');
+
+        try {
+            const quejaRef = doc(db, 'quejas', id);
+            const datos = { ...datosActualizados };
+
+            // Si se proporciona un archivo, subirlo y agregar la URL
+            if (archivo) {
+                const archivoRef = ref(storage, `quejas/${archivo.originalname}`);
+                await uploadBytes(archivoRef, archivo.buffer);
+                datos.archivoUrl = await getDownloadURL(archivoRef);
+            }
+
+            await updateDoc(quejaRef, datos);
+            return { message: 'Queja actualizada con éxito.' };
+        } catch (error) {
+            throw new Error('Error al actualizar la queja: ' + error.message);
+        }
+    }
+
     // Método para que el administrador responda a una queja
     static async responderQueja(id, respuesta, esAdmin) {
-        // Validación: solo el administrador puede responder a una queja
         if (!esAdmin) {
-            throw new Error('Acceso no autorizado'); // Error si no es administrador
+            throw new Error('Acceso no autorizado');
         }
 
         try {
-            const quejaRef = doc(db, 'quejas', id); // Referencia a la queja a responder
-            await updateDoc(quejaRef, { respuesta: respuesta }); // Agregar la respuesta a la queja
-            return { message: 'Respuesta añadida a la queja con éxito' }; // Mensaje de éxito
+            const quejaRef = doc(db, 'quejas', id);
+            await updateDoc(quejaRef, { respuesta: respuesta });
+            return { message: 'Respuesta añadida a la queja con éxito' };
         } catch (error) {
-            throw new Error('Error al responder a la queja: ' + error.message); // Manejo de errores
+            throw new Error('Error al responder a la queja: ' + error.message);
         }
     }
 
     // Método para eliminar una queja (solo para administradores)
     static async eliminarQueja(id, esAdmin) {
-        // Validación: solo el administrador puede eliminar una queja
         if (!esAdmin) {
-            throw new Error('Acceso no autorizado'); // Error si no es administrador
+            throw new Error('Acceso no autorizado');
         }
 
         try {
-            const quejaRef = doc(db, 'quejas', id); // Referencia a la queja a eliminar
-            await deleteDoc(quejaRef); // Eliminar la queja
-            return { message: 'Queja eliminada con éxito' }; // Mensaje de éxito
+            const quejaRef = doc(db, 'quejas', id);
+            await deleteDoc(quejaRef);
+            return { message: 'Queja eliminada con éxito' };
         } catch (error) {
-            throw new Error('Error al eliminar la queja: ' + error.message); // Manejo de errores
+            throw new Error('Error al eliminar la queja: ' + error.message);
         }
     }
 }

@@ -1,4 +1,3 @@
-// /manager/InvitacionesManager.js
 const { getFirestore, collection, addDoc, getDocs, doc, getDoc } = require('firebase/firestore');
 const EmailManager = require('./EmailManager'); // Importa el EmailManager para enviar correos
 const { Storage } = require('@google-cloud/storage'); // Importa la librería de Google Cloud Storage
@@ -21,66 +20,46 @@ class InvitacionesManager {
 
     // Función para crear una nueva invitación (solo el administrador puede hacerlo)
     async crearInvitacion(data, usuario, archivo) {
-        // Validaciones
         this.validarDatos(data);
         this.validarUsuario(usuario);
 
-        let archivoUrl = null;
-
-        // Manejar el archivo si se proporciona
-        if (archivo) {
-            archivoUrl = await this.subirArchivo(archivo);
-        }
+        let archivoUrl = archivo ? await this.subirArchivo(archivo) : null;
 
         try {
-            // Añade un nuevo documento a la colección de invitaciones
             const nuevaInvitacion = await addDoc(collection(this.db, this.collectionName), { ...data, archivoUrl });
-
-            // Envía el correo electrónico con la invitación usando el EmailManager
             await EmailManager.enviarCorreo(data.correo, data.asunto, data.mensaje);
-
-            // Retorna el ID de la nueva invitación junto con los datos
             return { id: nuevaInvitacion.id, ...data, archivoUrl };
         } catch (error) {
-            // Manejo de errores al crear la invitación
             throw new Error('Error al crear la invitación: ' + error.message);
         }
     }
 
     // Función para subir el archivo a Google Cloud Storage
     async subirArchivo(archivo) {
-        try {
-            const nombreArchivo = path.basename(archivo.originalname);
-            const blob = this.storage.bucket(this.bucketName).file(nombreArchivo);
+        const nombreArchivo = path.basename(archivo.originalname);
+        const blob = this.storage.bucket(this.bucketName).file(nombreArchivo);
 
-            const stream = blob.createWriteStream({
-                resumable: false,
-                contentType: archivo.mimetype
-            });
+        const stream = blob.createWriteStream({
+            resumable: false,
+            contentType: archivo.mimetype
+        });
 
-            return new Promise((resolve, reject) => {
-                stream.on('error', (error) => {
-                    reject(new Error('Error al subir el archivo: ' + error.message));
-                });
-                stream.on('finish', () => {
-                    resolve(`https://storage.googleapis.com/${this.bucketName}/${nombreArchivo}`);
-                });
-                stream.end(archivo.buffer); // Asumiendo que el archivo es un buffer
+        return new Promise((resolve, reject) => {
+            stream.on('error', (error) => {
+                reject(new Error('Error al subir el archivo: ' + error.message));
             });
-        } catch (error) {
-            throw new Error('Error al manejar el archivo: ' + error.message);
-        }
+            stream.on('finish', () => {
+                resolve(`https://storage.googleapis.com/${this.bucketName}/${nombreArchivo}`);
+            });
+            stream.end(archivo.buffer); // Asumiendo que el archivo es un buffer
+        });
     }
 
     // Función para listar todas las invitaciones
     async listarInvitaciones() {
         try {
             const snapshot = await getDocs(collection(this.db, this.collectionName));
-            const invitaciones = [];
-            snapshot.forEach(doc => {
-                invitaciones.push({ id: doc.id, ...doc.data() });
-            });
-            return invitaciones;
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             throw new Error('Error al listar las invitaciones: ' + error.message);
         }

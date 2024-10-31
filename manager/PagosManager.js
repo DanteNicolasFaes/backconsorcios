@@ -1,5 +1,5 @@
 // /manager/PagosManager.js
-const { getFirestore, collection, addDoc, getDocs, doc, getDoc, deleteDoc } = require('firebase/firestore'); // Importar funciones de Firestore
+const { getFirestore, collection, addDoc, getDocs, doc, getDoc, deleteDoc, updateDoc } = require('firebase/firestore'); // Importar funciones de Firestore
 const db = getFirestore(); // Inicializar Firestore
 const { enviarNotificacionPago } = require('../services/mailer'); // Importar la función para enviar correos
 const UsuariosManager = require('./UsuariosManager'); // Importar UsuariosManager para obtener el email del usuario
@@ -76,6 +76,35 @@ class PagosManager {
             return { message: 'Pago eliminado con éxito' }; // Mensaje de éxito
         } catch (error) {
             throw new Error(`Error al eliminar el pago: ${error.message}`);
+        }
+    }
+
+    // Método para actualizar un pago
+    static async actualizarPago(id, datosActualizados, esAdmin) {
+        // Solo el administrador puede actualizar pagos
+        this.validarAcceso(esAdmin);
+
+        try {
+            const pagoRef = doc(db, 'pagos', id); // Referencia al documento del pago
+            const pagoSnap = await getDoc(pagoRef); // Obtener el documento
+
+            if (!pagoSnap.exists()) {
+                throw new Error('Pago no encontrado'); // Lanzar error si no existe
+            }
+
+            // Actualizar el documento en Firestore
+            await updateDoc(pagoRef, {
+                ...(datosActualizados.idUnidadFuncional && { idUnidadFuncional: datosActualizados.idUnidadFuncional }),
+                ...(datosActualizados.monto && { monto: datosActualizados.monto }),
+                ...(datosActualizados.fechaPago && { fechaPago: datosActualizados.fechaPago }),
+                ...(datosActualizados.estado && { estado: datosActualizados.estado }),
+                ...(datosActualizados.descripcion !== undefined && { descripcion: datosActualizados.descripcion }), // Usar undefined para permitir el valor vacío
+                ...(datosActualizados.archivo && { archivo: datosActualizados.archivo }) // Solo actualizar si el archivo está presente
+            });
+
+            return { id, ...datosActualizados }; // Retornar los datos actualizados
+        } catch (error) {
+            throw new Error(`Error al actualizar el pago: ${error.message}`); // Manejo de errores
         }
     }
 

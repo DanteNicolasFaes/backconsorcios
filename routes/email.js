@@ -20,6 +20,13 @@ router.post('/enviar', authenticateUser, verifyAdmin, upload.single('archivo'), 
     try {
         // Enviar correo utilizando EmailManager
         const resultado = await EmailManager.enviarCorreo(destinatario, asunto, mensaje, archivoAdjunto);
+        
+        // Eliminar archivo adjunto después del envío, si es necesario
+        if (archivoAdjunto) {
+            // Código para eliminar el archivo si no lo necesitas después de enviarlo
+            // fs.unlinkSync(archivoAdjunto);
+        }
+        
         return res.status(200).json(resultado); // Respuesta exitosa
     } catch (error) {
         // Manejar errores específicos si es necesario

@@ -26,7 +26,7 @@ router.post('/', authenticateUser, verifyAdmin, upload.single('archivo'), async 
             ...req.body,
             archivo: req.file ? req.file.path : null // Añadir la ruta del archivo si se ha subido
         };
-        const usuarioCreado = await UsuariosManager.crearUsuario(nuevoUsuario);
+        const usuarioCreado = await UsuariosManager.crearUsuario(nuevoUsuario, true, req.file); // Pasar esAdmin como true
         res.status(201).json(usuarioCreado);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
@@ -60,7 +60,7 @@ router.put('/:id', authenticateUser, verifyAdmin, upload.single('archivo'), asyn
             ...req.body,
             archivo: req.file ? req.file.path : null // Añadir la ruta del archivo si se ha subido
         };
-        const usuario = await UsuariosManager.actualizarUsuario(req.params.id, usuarioActualizado);
+        const usuario = await UsuariosManager.actualizarUsuario(req.params.id, usuarioActualizado, true, req.file); // Pasar esAdmin como true
         res.status(200).json(usuario);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
@@ -70,7 +70,7 @@ router.put('/:id', authenticateUser, verifyAdmin, upload.single('archivo'), asyn
 // Ruta para eliminar un usuario
 router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     try {
-        const mensaje = await UsuariosManager.eliminarUsuario(req.params.id);
+        const mensaje = await UsuariosManager.eliminarUsuario(req.params.id, true); // Pasar esAdmin como true
         res.status(200).json(mensaje);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
