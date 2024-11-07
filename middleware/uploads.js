@@ -11,7 +11,7 @@ const storage = multer.diskStorage({
     },
 });
 
-// Crear el middleware de multer
-const upload = multer({ storage });
+// Crear el middleware de multer para manejar varios archivos
+const upload = multer({ storage }).array('files'); // Permite la subida de múltiples archivos con el campo 'files'
 
 module.exports = upload; // Exportar el middleware para usarlo en otras partes de la aplicación

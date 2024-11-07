@@ -1,0 +1,115 @@
+const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore');
+const nodemailer = require('nodemailer');
+const db = getFirestore(); // Inicializar Firestore
+const ConfiguracionConsorcioManager = require('./ConfiguracionConsorcioManager');
+
+class ExpensasManager {
+    // Método para crear una nueva expensa
+    static async crearExpensa(expensa) {
+        this.validarExpensa(expensa);
+
+        const configConsorcio = await ConfiguracionConsorcioManager.obtenerConfiguracion(expensa.consorcioId);
+        const montoConIntereses = this.calcularIntereses(expensa, configConsorcio);
+
+        try {
+            const nuevaExpensaRef = await addDoc(collection(db, 'expensas'), {
+                consorcioId: expensa.consorcioId,
+                mes: expensa.mes,
+                anio: expensa.anio,
+                monto: montoConIntereses,
+                descripcion: expensa.descripcion || '',
+                fechaVencimiento: expensa.fechaVencimiento,
+                fechaPago: expensa.fechaPago || null,
+                enviada: false,
+            });
+
+            return { id: nuevaExpensaRef.id, ...expensa, monto: montoConIntereses };
+        } catch (error) {
+            throw new Error(`Error al crear la expensa: ${error.message}`);
+        }
+    }
+
+    // Método para calcular los intereses por mora
+    static calcularIntereses(expensa, configConsorcio) {
+        const fechaVencimiento = new Date(expensa.fechaVencimiento);
+        const fechaPago = expensa.fechaPago ? new Date(expensa.fechaPago) : new Date();
+        const diasDeMora = Math.max((fechaPago - fechaVencimiento) / (1000 * 60 * 60 * 24), 0); // Días de mora
+
+        const tasaInteresDiario = configConsorcio.interesPorMora || 0.005;
+        const interes = diasDeMora * tasaInteresDiario * expensa.monto;
+
+        return expensa.monto + interes;
+    }
+
+    // Validación de los datos de la expensa
+    static validarExpensa(expensa) {
+        if (!expensa.mes || !expensa.anio || !expensa.monto || !expensa.fechaVencimiento) {
+            throw new Error('Todos los campos son necesarios');
+        }
+    }
+
+    // Método para obtener todas las expensas
+    static async obtenerExpensas() {
+        const expensasSnap = await getDocs(collection(db, 'expensas'));
+        return expensasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    // Obtener una expensa por ID
+    static async obtenerExpensaPorId(id) {
+        const expensaRef = doc(db, 'expensas', id);
+        const expensaSnap = await getDoc(expensaRef);
+        if (!expensaSnap.exists()) {
+            throw new Error('Expensa no encontrada');
+        }
+        return { id: expensaSnap.id, ...expensaSnap.data() };
+    }
+
+    // Modificar una expensa
+    static async modificarExpensa(id, datosActualizados) {
+        try {
+            const expensaRef = doc(db, 'expensas', id);
+            await updateDoc(expensaRef, datosActualizados);
+            return { id, ...datosActualizados };
+        } catch (error) {
+            throw new Error(`Error al modificar la expensa: ${error.message}`);
+        }
+    }
+
+    // Eliminar una expensa
+    static async eliminarExpensa(id) {
+        try {
+            const expensaRef = doc(db, 'expensas', id);
+            await deleteDoc(expensaRef);
+            return { message: 'Expensa eliminada con éxito' };
+        } catch (error) {
+            throw new Error(`Error al eliminar la expensa: ${error.message}`);
+        }
+    }
+
+    // Enviar la expensa por email
+    static async enviarExpensaPorEmail(expensa, email) {
+        try {
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: 'tucorreo@gmail.com',
+                    pass: 'tucontraseña',
+                },
+            });
+
+            const mailOptions = {
+                from: 'tucorreo@gmail.com',
+                to: email,
+                subject: `Expensa correspondiente a ${expensa.mes}/${expensa.anio}`,
+                text: `Detalle de la expensa: \nMonto: ${expensa.monto}\nDescripción: ${expensa.descripcion}\nFecha Vencimiento: ${expensa.fechaVencimiento}`,
+            };
+
+            await transporter.sendMail(mailOptions);
+            return { message: 'Expensa enviada por correo con éxito' };
+        } catch (error) {
+            throw new Error(`Error al enviar la expensa por email: ${error.message}`);
+        }
+    }
+}
+
+module.exports = ExpensasManager;

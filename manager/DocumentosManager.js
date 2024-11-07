@@ -2,21 +2,21 @@ const { getFirestore, collection, addDoc, getDocs, doc, getDoc, deleteDoc, updat
 const db = getFirestore(); // Inicializar Firestore
 
 class DocumentosManager {
-    // Método para subir un nuevo documento (solo para administradores)
-    static async subirDocumento(documento, archivoRuta) {
-        this.validarDocumento(documento, archivoRuta); // Validaciones
+    // Método para subir un nuevo documento (ahora soporta múltiples archivos)
+    static async subirDocumento(documento, archivosRutas) {
+        this.validarDocumento(documento, archivosRutas); // Validaciones
 
         try {
             const nuevoDocumentoRef = await addDoc(collection(db, 'documentos'), {
                 categoria: documento.categoria,
                 fecha: documento.fecha,
-                archivo: archivoRuta,  // Ruta del archivo subida por Multer
+                archivos: archivosRutas,  // Ahora es un array con las rutas de los archivos
                 descripcion: documento.descripcion || ''  // Descripción opcional del documento
             });
 
-            return { id: nuevoDocumentoRef.id, ...documento, archivo: archivoRuta };
+            return { id: nuevoDocumentoRef.id, ...documento, archivos: archivosRutas };
         } catch (error) {
-            throw new Error(`Error al subir el documento: ${error.message}`);
+            throw new Error(`Error al subir los documentos: ${error.message}`);
         }
     }
 
@@ -44,13 +44,13 @@ class DocumentosManager {
         }
     }
 
-    // Método para actualizar un documento (solo para administradores)
-    static async actualizarDocumento(id, datosActualizados, archivoRuta) {
+    // Método para actualizar un documento (ahora también soporta múltiples archivos)
+    static async actualizarDocumento(id, datosActualizados, archivosRutas) {
         try {
             const documentoRef = doc(db, 'documentos', id);
             const updates = { ...datosActualizados };
-            if (archivoRuta) {
-                updates.archivo = archivoRuta;
+            if (archivosRutas && archivosRutas.length > 0) {
+                updates.archivos = archivosRutas;  // Actualizamos el array de archivos
             }
             await updateDoc(documentoRef, updates);
             return { message: 'Documento actualizado con éxito' };
@@ -70,8 +70,8 @@ class DocumentosManager {
         }
     }
 
-    // Método para validar un documento
-    static validarDocumento(documento, archivoRuta) {
+    // Método para validar un documento (ahora también soporta múltiples archivos)
+    static validarDocumento(documento, archivosRutas) {
         // Verificar categoría
         if (!documento.categoria || typeof documento.categoria !== 'string') {
             throw new Error('La categoría es obligatoria y debe ser una cadena de texto.');
@@ -80,9 +80,9 @@ class DocumentosManager {
         if (!documento.fecha || isNaN(new Date(documento.fecha).getTime())) {
             throw new Error('La fecha es obligatoria y debe tener un formato válido.');
         }
-        // Verificar archivo
-        if (!archivoRuta) {
-            throw new Error('El archivo es obligatorio.');
+        // Verificar archivos
+        if (!archivosRutas || archivosRutas.length === 0) {
+            throw new Error('Al menos un archivo debe ser proporcionado.');
         }
     }
 }
