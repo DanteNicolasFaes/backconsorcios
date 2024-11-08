@@ -1,5 +1,4 @@
-require('dotenv').config(); // Cargar variables de entorno
-
+// routes/edificios.js
 const express = require('express');
 const router = express.Router();
 const EdificiosManager = require('../manager/EdificiosManager');
@@ -19,10 +18,13 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Ruta para crear un nuevo edificio
-router.post('/', authenticateUser, verifyAdmin, upload.single('documento'), async (req, res) => {
+router.post('/', authenticateUser, verifyAdmin, upload.array('documentos', 10), async (req, res) => {
     try {
         const esAdmin = req.user && req.user.esAdmin; // Verificar si el usuario es administrador
-        const edificioData = { ...req.body, documento: req.file ? req.file.path : null }; // Agregar el archivo si existe
+        const edificioData = { 
+            ...req.body, 
+            documentos: req.files ? req.files.map(file => file.path) : [] // Si hay archivos, se agregan sus rutas
+        };
         const nuevoEdificio = await EdificiosManager.crearEdificio(edificioData, esAdmin);
 
         res.status(201).json(nuevoEdificio);
@@ -52,11 +54,11 @@ router.get('/:id', authenticateUser, async (req, res) => {
 });
 
 // Ruta para actualizar un edificio
-router.put('/:id', authenticateUser, verifyAdmin, upload.single('documento'), async (req, res) => {
+router.put('/:id', authenticateUser, verifyAdmin, upload.array('documentos', 10), async (req, res) => {
     try {
         const edificioData = { ...req.body };
-        if (req.file) {
-            edificioData.documento = req.file.path; // Agregar la ruta del archivo si se subió
+        if (req.files && req.files.length > 0) {
+            edificioData.documentos = req.files.map(file => file.path); // Si se suben archivos, se actualiza con sus rutas
         }
         const edificioActualizado = await EdificiosManager.actualizarEdificio(req.params.id, edificioData);
         res.status(200).json(edificioActualizado);

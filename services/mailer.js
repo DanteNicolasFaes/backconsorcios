@@ -12,19 +12,35 @@ const transporter = nodemailer.createTransport({
 
 // Función para enviar notificación de pago
 const enviarNotificacionPago = async (email, pago) => {
+    // Validación de datos de pago
+    if (!pago.monto || !pago.fechaPago || !pago.estado) {
+        throw new Error('Faltan datos del pago.');
+    }
+
+    // Opciones del correo
     const mailOptions = {
         from: process.env.EMAIL_USER, // Remitente
         to: email, // Destinatario
         subject: 'Notificación de Pago',
-        text: `Se ha registrado un nuevo pago:\nMonto: ${pago.monto}\nFecha: ${pago.fechaPago}\nEstado: ${pago.estado}\nDescripción: ${pago.descripcion || 'N/A'}`,
+        html: `
+            <h3>Se ha registrado un nuevo pago:</h3>
+            <ul>
+                <li><strong>Monto:</strong> ${pago.monto}</li>
+                <li><strong>Fecha:</strong> ${pago.fechaPago}</li>
+                <li><strong>Estado:</strong> ${pago.estado}</li>
+                <li><strong>Descripción:</strong> ${pago.descripcion || 'N/A'}</li>
+            </ul>
+        `,
     };
 
     try {
+        // Enviar el correo
         await transporter.sendMail(mailOptions);
         console.log('Correo enviado con éxito');
     } catch (error) {
-        console.error('Error al enviar el correo:', error);
-        throw new Error('No se pudo enviar el correo');
+        // Capturar error
+        console.error('Error al enviar el correo:', error.message);
+        throw new Error(`No se pudo enviar el correo: ${error.message}`);
     }
 };
 

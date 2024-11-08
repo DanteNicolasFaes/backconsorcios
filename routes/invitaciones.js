@@ -1,25 +1,39 @@
+// routes/invitaciones.js
+
 const express = require('express');
 const router = express.Router();
-const authenticateUser = require('../middleware/authenticateUser'); // Middleware para autenticar usuarios
-const verifyAdmin = require('../middleware/verifyAdmin'); // Middleware para verificar si el usuario es administrador
 const upload = require('../middleware/upload'); // Middleware para subir archivos
 const InvitacionesManager = require('../manager/InvitacionesManager');
 const UsuariosManager = require('../manager/UsuariosManager');
 const EmailManager = require('../manager/EmailManager'); // Importar EmailManager
+const authenticateUser = require('../middleware/authenticateUser'); // Middleware para autenticar usuarios
+const verifyAdmin = require('../middleware/verifyAdmin'); // Middleware para verificar si el usuario es administrador
 
 // Ruta para crear una nueva invitación
-router.post('/', authenticateUser, verifyAdmin, upload.single('archivo'), async (req, res) => {
+router.post('/', authenticateUser, verifyAdmin, upload.array('archivos', 10), async (req, res) => { // Permitir hasta 10 archivos
     try {
         const datosInvitacion = {
             ...req.body,
-            archivo: req.file // Almacenar el archivo directamente para pasarlo al manager
+            archivos: req.files // Los archivos subidos (si existen)
         };
 
-        const nuevaInvitacion = await InvitacionesManager.crearInvitacion(datosInvitacion, req.user, req.file);
+        // Crear la invitación en el sistema
+        const nuevaInvitacion = await InvitacionesManager.crearInvitacion(datosInvitacion, req.user, req.files);
         
-        const administrador = await UsuariosManager.obtenerAdministrador();
-        await EmailManager.enviarCorreo(administrador.email, 'Nueva Invitación', `Se ha creado una nueva invitación: ${nuevaInvitacion.nombre}.`);
+        // Enviar la invitación por correo electrónico a los propietarios/inquilinos
+        const correos = req.body.correos; // Array de correos electrónicos de los destinatarios
+        const mensaje = `¡Hola! Has recibido una invitación para unirte al software de administración de consorcios. 
+                         Por favor, regístrate en el siguiente enlace: https://tuapp.com/registro?invitacion=${nuevaInvitacion.id}`;
 
+        for (let email of correos) {
+            await EmailManager.enviarCorreo(
+                email, 
+                'Invitación para unirte al software de administración', 
+                mensaje
+            );
+        }
+
+        // Responder con la invitación creada
         res.status(201).json(nuevaInvitacion);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });

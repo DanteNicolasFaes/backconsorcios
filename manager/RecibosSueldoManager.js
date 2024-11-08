@@ -1,16 +1,32 @@
-const { getFirestore, collection, addDoc, getDocs, query, where } = require('firebase/firestore'); 
+const { getFirestore, collection, addDoc, getDocs, query, where } = require('firebase/firestore');
+const { getStorage, ref, uploadBytesResumable, getDownloadURL } = require('firebase/storage');
 const db = getFirestore();
+const storage = getStorage();
 
-// Función para crear un recibo de sueldo para un encargado específico
-const crearReciboSueldo = async (encargadoId, reciboData) => {
+// Función para crear un recibo de sueldo para un encargado específico con un archivo
+const crearReciboSueldo = async (encargadoId, reciboData, file) => {
     try {
+        // Si hay un archivo, subimos a Firebase Storage
+        let fileURL = null;
+        if (file) {
+            const fileRef = ref(storage, `recibosSueldo/${Date.now()}-${file.originalname}`);
+            const uploadTask = uploadBytesResumable(fileRef, file.buffer);
+
+            // Esperar a que la carga termine y obtener la URL del archivo
+            await uploadTask;
+            fileURL = await getDownloadURL(fileRef);
+        }
+
+        // Crear el recibo en Firestore
         const nuevoRecibo = {
             encargadoId, // Asocia el recibo al ID del encargado
             mes: reciboData.mes,
             año: reciboData.año,
             monto: reciboData.monto,
             detalles: reciboData.detalles, // Detalles adicionales del recibo, como bonos, descuentos, etc.
+            archivoURL: fileURL, // Guardamos la URL del archivo subido
         };
+
         const docRef = await addDoc(collection(db, 'recibosSueldo'), nuevoRecibo);
         console.log("Recibo de sueldo creado con ID: ", docRef.id);
         return docRef.id;

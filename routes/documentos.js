@@ -1,29 +1,18 @@
+// routes/documentos.js
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
 const DocumentosManager = require('../manager/DocumentosManager');
-
-// Configuración de Multer para el manejo de archivos
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');  // Directorio donde se almacenarán los archivos
-    },
-    filename: (req, file, cb) => {
-        const fileExtension = path.extname(file.originalname);
-        const fileName = Date.now() + fileExtension;
-        cb(null, fileName);  // Usamos la fecha actual para evitar nombres repetidos
-    }
-});
-const upload = multer({ storage: storage });
+const authenticateUser = require('../middleware/authenticateUser');
+const verifyAdmin = require('../middleware/verifyAdmin');
+const upload = require('../middleware/uploads'); // Importar middleware de carga de archivos
 
 // Ruta para subir un documento (ahora soporta múltiples archivos)
-router.post('/', upload.array('archivos', 10), async (req, res) => {
+router.post('/', authenticateUser, verifyAdmin, upload.array('files'), async (req, res) => {
     try {
         const archivosRutas = req.files.map(file => file.path);  // Obtener las rutas de los archivos subidos
         const documento = req.body;  // Los demás datos del documento (categoría, fecha, descripción)
 
-        // Llamamos al método para subir los documentos
+        // Llamar al método para subir los documentos
         const resultado = await DocumentosManager.subirDocumento(documento, archivosRutas);
 
         res.status(200).json(resultado);
@@ -33,7 +22,7 @@ router.post('/', upload.array('archivos', 10), async (req, res) => {
 });
 
 // Ruta para obtener todos los documentos
-router.get('/', async (req, res) => {
+router.get('/', authenticateUser, async (req, res) => {
     try {
         const documentos = await DocumentosManager.listarDocumentos();
         res.status(200).json(documentos);
@@ -43,7 +32,7 @@ router.get('/', async (req, res) => {
 });
 
 // Ruta para obtener un documento por ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateUser, async (req, res) => {
     try {
         const documento = await DocumentosManager.obtenerDocumentoPorId(req.params.id);
         res.status(200).json(documento);
@@ -53,7 +42,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Ruta para actualizar un documento (soporta múltiples archivos)
-router.put('/:id', upload.array('archivos', 10), async (req, res) => {
+router.put('/:id', authenticateUser, verifyAdmin, upload.array('files'), async (req, res) => {
     try {
         const archivosRutas = req.files.map(file => file.path);  // Nuevas rutas de archivos
         const datosActualizados = req.body;  // Otros datos a actualizar
@@ -66,7 +55,7 @@ router.put('/:id', upload.array('archivos', 10), async (req, res) => {
 });
 
 // Ruta para eliminar un documento
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     try {
         const resultado = await DocumentosManager.eliminarDocumento(req.params.id);
         res.status(200).json(resultado);

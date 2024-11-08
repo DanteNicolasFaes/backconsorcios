@@ -1,9 +1,22 @@
+// routes/email.js
 const express = require('express');
 const router = express.Router();
 const EmailManager = require('../manager/EmailManager');
 const authenticateUser = require('../middleware/authenticateUser'); // Middleware para autenticar al usuario
 const verifyAdmin = require('../middleware/verifyAdmin'); // Middleware para verificar que el usuario sea administrador
-const upload = require('../middleware/upload'); // Middleware para manejar la subida de archivos
+const multer = require('multer'); // Usamos multer para manejar la subida de archivos
+const fs = require('fs'); // Importar el módulo fs para eliminar archivos si es necesario
+
+// Configuración de Multer para manejar la carga de archivos
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // Carpeta donde se guardarán los archivos
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`); // Nombre del archivo
+    }
+});
+const upload = multer({ storage });
 
 // Ruta para enviar un correo electrónico
 router.post('/enviar', authenticateUser, verifyAdmin, upload.single('archivo'), async (req, res) => {
@@ -21,17 +34,16 @@ router.post('/enviar', authenticateUser, verifyAdmin, upload.single('archivo'), 
         // Enviar correo utilizando EmailManager
         const resultado = await EmailManager.enviarCorreo(destinatario, asunto, mensaje, archivoAdjunto);
         
-        // Eliminar archivo adjunto después del envío, si es necesario
+        // Si se subió un archivo y no es necesario después del envío, eliminamos el archivo
         if (archivoAdjunto) {
-            // Código para eliminar el archivo si no lo necesitas después de enviarlo
-            // fs.unlinkSync(archivoAdjunto);
+            fs.unlinkSync(archivoAdjunto); // Eliminar el archivo del servidor
         }
         
         return res.status(200).json(resultado); // Respuesta exitosa
     } catch (error) {
         // Manejar errores específicos si es necesario
         if (error.message.includes('formato válido')) {
-            return res.status(400).json({ mensaje: error.message }); // Error de formato de correo
+            return res.status(400).json({ mensaje: 'Error de formato en el correo: ' + error.message }); // Error de formato de correo
         }
         // Manejar errores de envío de correo
         console.error('Error al enviar el correo: ', error); // Log de error

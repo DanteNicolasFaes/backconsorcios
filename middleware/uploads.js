@@ -1,4 +1,4 @@
-// /middleware/upload.js
+// /middleware/uploads.js
 const multer = require('multer');
 
 // Configuración de multer para almacenar archivos en la carpeta 'uploads'
@@ -11,7 +11,16 @@ const storage = multer.diskStorage({
     },
 });
 
-// Crear el middleware de multer para manejar varios archivos
-const upload = multer({ storage }).array('files'); // Permite la subida de múltiples archivos con el campo 'files'
+// Configuración de multer con límite de tamaño y filtro de tipo de archivo
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // Limite de tamaño de archivo (5 MB)
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype !== 'image/jpeg') {
+            return cb(new Error('Solo se permiten archivos JPEG'));
+        }
+        cb(null, true);
+    }
+}).array('files'); // Permite la subida de múltiples archivos
 
-module.exports = upload; // Exportar el middleware para usarlo en otras partes de la aplicación
+module.exports = upload;
