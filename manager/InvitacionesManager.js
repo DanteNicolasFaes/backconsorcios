@@ -1,4 +1,5 @@
 const { getFirestore, collection, addDoc, getDocs, doc, getDoc } = require('firebase/firestore');
+const jwt = require('jsonwebtoken');  // Importar jsonwebtoken para generar el token
 const EmailManager = require('./EmailManager'); // Importa el EmailManager para enviar correos
 const { Storage } = require('@google-cloud/storage'); // Importa la librería de Google Cloud Storage
 const path = require('path'); // Importa path para manejar rutas de archivos
@@ -19,22 +20,41 @@ class InvitacionesManager {
     }
 
     // Función para crear una nueva invitación (solo el administrador puede hacerlo)
-    async crearInvitacion(data, usuario, archivo) {
+    async crearInvitacion(data, usuario, archivos) {
         this.validarDatos(data);
         this.validarUsuario(usuario);
 
-        let archivoUrl = archivo ? await this.subirArchivo(archivo) : null;
+        // Subir archivos si existen
+        let archivoUrls = [];
+        if (archivos && archivos.length > 0) {
+            archivoUrls = await Promise.all(archivos.map(archivo => this.subirArchivo(archivo)));
+        }
+
+        // Generamos el token de invitación con el correo del propietario/inquilino
+        const token = this.generarTokenInvitacion(data.correo);
 
         try {
-            const nuevaInvitacion = await addDoc(collection(this.db, this.collectionName), { ...data, archivoUrl });
+            const nuevaInvitacion = await addDoc(collection(this.db, this.collectionName), { ...data, archivoUrls, token });
             await EmailManager.enviarCorreo(data.correo, data.asunto, data.mensaje);
-            return { id: nuevaInvitacion.id, ...data, archivoUrl };
+            return { id: nuevaInvitacion.id, ...data, archivoUrls, token };  // Incluimos el token en la respuesta
         } catch (error) {
             throw new Error('Error al crear la invitación: ' + error.message);
         }
     }
 
-    // Función para subir el archivo a Google Cloud Storage
+    // Función para generar el token de invitación
+    generarTokenInvitacion(email) {
+        const payload = {
+            email: email,
+            isAdmin: false,  // Establecemos que el rol es de propietario/inquilino
+        };
+
+        // Generamos el token con el payload, la clave secreta y un tiempo de expiración
+        const token = jwt.sign(payload, 'secreto_del_token', { expiresIn: '1h' });  // Token con expiración de 1 hora
+        return token;
+    }
+
+    // Función para subir los archivos a Google Cloud Storage
     async subirArchivo(archivo) {
         const nombreArchivo = path.basename(archivo.originalname);
         const blob = this.storage.bucket(this.bucketName).file(nombreArchivo);

@@ -13,7 +13,10 @@ router.get('/:consorcioId', authenticateUser, verifyAdmin, async (req, res) => {
         const configuracion = await ConfiguracionFinancieraManager.obtenerConfiguracion(consorcioId);
         res.json(configuracion);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        // Enviar un mensaje de error más detallado
+        res.status(404).json({
+            error: `No se pudo obtener la configuración financiera: ${error.message}`
+        });
     }
 });
 
@@ -23,7 +26,7 @@ router.post('/:consorcioId', authenticateUser, verifyAdmin, upload.array('files'
     const { interesPorMora, periodoMora } = req.body;
 
     // Manejar archivos subidos
-    const archivos = req.files ? req.files.map(file => file.path) : []; // Obtener las rutas de los archivos subidos
+    const archivos = req.files ? req.files.map(file => `http://yourdomain.com/uploads/${file.filename}`) : [];
 
     try {
         const configuracion = {
@@ -36,7 +39,10 @@ router.post('/:consorcioId', authenticateUser, verifyAdmin, upload.array('files'
         const result = await ConfiguracionFinancieraManager.crearOActualizarConfiguracion(consorcioId, configuracion);
         res.json(result);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        // Enviar un mensaje de error más detallado
+        res.status(500).json({
+            error: `Error al crear o actualizar la configuración financiera: ${error.message}`
+        });
     }
 });
 
@@ -46,7 +52,7 @@ router.put('/:consorcioId', authenticateUser, verifyAdmin, upload.array('files')
     const { interesPorMora, periodoMora } = req.body;
 
     // Manejar archivos subidos
-    const archivos = req.files ? req.files.map(file => file.path) : [];
+    const archivos = req.files ? req.files.map(file => `http://yourdomain.com/uploads/${file.filename}`) : [];
 
     try {
         const configuracion = {
@@ -58,7 +64,10 @@ router.put('/:consorcioId', authenticateUser, verifyAdmin, upload.array('files')
         const result = await ConfiguracionFinancieraManager.actualizarConfiguracion(consorcioId, configuracion);
         res.json(result);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        // Enviar un mensaje de error más detallado
+        res.status(500).json({
+            error: `Error al actualizar la configuración financiera: ${error.message}`
+        });
     }
 });
 
@@ -70,7 +79,10 @@ router.delete('/:consorcioId', authenticateUser, verifyAdmin, async (req, res) =
         const result = await ConfiguracionFinancieraManager.eliminarConfiguracion(consorcioId);
         res.json(result);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        // Enviar un mensaje de error más detallado
+        res.status(500).json({
+            error: `Error al eliminar la configuración financiera: ${error.message}`
+        });
     }
 });
 

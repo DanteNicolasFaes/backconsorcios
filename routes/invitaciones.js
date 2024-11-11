@@ -4,7 +4,6 @@ const express = require('express');
 const router = express.Router();
 const upload = require('../middleware/upload'); // Middleware para subir archivos
 const InvitacionesManager = require('../manager/InvitacionesManager');
-const UsuariosManager = require('../manager/UsuariosManager');
 const EmailManager = require('../manager/EmailManager'); // Importar EmailManager
 const authenticateUser = require('../middleware/authenticateUser'); // Middleware para autenticar usuarios
 const verifyAdmin = require('../middleware/verifyAdmin'); // Middleware para verificar si el usuario es administrador
@@ -20,11 +19,12 @@ router.post('/', authenticateUser, verifyAdmin, upload.array('archivos', 10), as
         // Crear la invitación en el sistema
         const nuevaInvitacion = await InvitacionesManager.crearInvitacion(datosInvitacion, req.user, req.files);
         
+        // Generar el mensaje con el enlace de registro utilizando el token de la invitación
+        const mensaje = `¡Hola! Has recibido una invitación para unirte al software de administración de consorcios. 
+                         Por favor, regístrate en el siguiente enlace: https://tuapp.com/registro?invitacion=${nuevaInvitacion.token}`;
+
         // Enviar la invitación por correo electrónico a los propietarios/inquilinos
         const correos = req.body.correos; // Array de correos electrónicos de los destinatarios
-        const mensaje = `¡Hola! Has recibido una invitación para unirte al software de administración de consorcios. 
-                         Por favor, regístrate en el siguiente enlace: https://tuapp.com/registro?invitacion=${nuevaInvitacion.id}`;
-
         for (let email of correos) {
             await EmailManager.enviarCorreo(
                 email, 

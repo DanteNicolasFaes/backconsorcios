@@ -1,5 +1,6 @@
 // /middleware/authenticateUser.js
 const jwt = require('jsonwebtoken');
+require('dotenv').config(); // Cargar variables de entorno desde un archivo .env
 
 const authenticateUser = (req, res, next) => {
     // Obtiene el token de la cabecera 'Authorization'
@@ -12,13 +13,11 @@ const authenticateUser = (req, res, next) => {
 
     try {
         // Verifica el token y extrae la información del usuario
-        const decoded = jwt.verify(token, 'secreto_del_token'); // Reemplaza 'secreto_del_token' con tu clave secreta
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY); // Lee la clave secreta desde .env
         req.user = decoded; // Almacena la información del usuario en req.user
 
         // Asegúrate de que isAdmin esté presente
-        if (!req.user.isAdmin) {
-            req.user.isAdmin = false; // Establece un valor predeterminado si no está presente
-        }
+        req.user.isAdmin = req.user.isAdmin || false; // Usa un valor predeterminado si no está presente
 
         next(); // Continúa con la siguiente función
     } catch (error) {
