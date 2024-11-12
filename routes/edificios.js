@@ -1,4 +1,3 @@
-// routes/edificios.js
 const express = require('express');
 const router = express.Router();
 const EdificiosManager = require('../manager/EdificiosManager');
@@ -20,13 +19,11 @@ const upload = multer({ storage });
 // Ruta para crear un nuevo edificio
 router.post('/', authenticateUser, verifyAdmin, upload.array('documentos', 10), async (req, res) => {
     try {
-        const esAdmin = req.user && req.user.esAdmin; // Verificar si el usuario es administrador
         const edificioData = { 
             ...req.body, 
             documentos: req.files ? req.files.map(file => file.path) : [] // Si hay archivos, se agregan sus rutas
         };
-        const nuevoEdificio = await EdificiosManager.crearEdificio(edificioData, esAdmin);
-
+        const nuevoEdificio = await EdificiosManager.crearEdificio(edificioData, true); // `true` asegura que solo admin accede
         res.status(201).json(nuevoEdificio);
     } catch (error) {
         res.status(500).json({ mensaje: `Error al crear el edificio: ${error.message}` });
@@ -47,9 +44,12 @@ router.get('/', authenticateUser, async (req, res) => {
 router.get('/:id', authenticateUser, async (req, res) => {
     try {
         const edificio = await EdificiosManager.obtenerEdificioPorId(req.params.id);
+        if (!edificio) {
+            return res.status(404).json({ mensaje: 'Edificio no encontrado' });
+        }
         res.status(200).json(edificio);
     } catch (error) {
-        res.status(404).json({ mensaje: `Edificio no encontrado: ${error.message}` });
+        res.status(500).json({ mensaje: `Error al obtener el edificio: ${error.message}` });
     }
 });
 
@@ -58,9 +58,12 @@ router.put('/:id', authenticateUser, verifyAdmin, upload.array('documentos', 10)
     try {
         const edificioData = { ...req.body };
         if (req.files && req.files.length > 0) {
-            edificioData.documentos = req.files.map(file => file.path); // Si se suben archivos, se actualiza con sus rutas
+            edificioData.documentos = req.files.map(file => file.path); // Actualizar con las rutas de archivos si existen
         }
         const edificioActualizado = await EdificiosManager.actualizarEdificio(req.params.id, edificioData);
+        if (!edificioActualizado) {
+            return res.status(404).json({ mensaje: 'Edificio no encontrado para actualizar' });
+        }
         res.status(200).json(edificioActualizado);
     } catch (error) {
         res.status(500).json({ mensaje: `Error al actualizar el edificio: ${error.message}` });
@@ -70,8 +73,11 @@ router.put('/:id', authenticateUser, verifyAdmin, upload.array('documentos', 10)
 // Ruta para eliminar un edificio
 router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     try {
-        const mensaje = await EdificiosManager.eliminarEdificio(req.params.id);
-        res.status(200).json(mensaje);
+        const resultado = await EdificiosManager.eliminarEdificio(req.params.id);
+        if (!resultado) {
+            return res.status(404).json({ mensaje: 'Edificio no encontrado para eliminar' });
+        }
+        res.status(200).json(resultado);
     } catch (error) {
         res.status(500).json({ mensaje: `Error al eliminar el edificio: ${error.message}` });
     }

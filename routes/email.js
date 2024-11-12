@@ -1,7 +1,6 @@
-// routes/email.js
 const express = require('express');
 const router = express.Router();
-const EmailManager = require('../manager/EmailManager');
+const mailer = require('../services/mailer'); // Importar el servicio de correo
 const authenticateUser = require('../middleware/authenticateUser'); // Middleware para autenticar al usuario
 const verifyAdmin = require('../middleware/verifyAdmin'); // Middleware para verificar que el usuario sea administrador
 const multer = require('multer'); // Usamos multer para manejar la subida de archivos
@@ -31,8 +30,13 @@ router.post('/enviar', authenticateUser, verifyAdmin, upload.single('archivo'), 
     const archivoAdjunto = req.file ? req.file.path : null; // Guarda la ruta del archivo, si existe
 
     try {
-        // Enviar correo utilizando EmailManager
-        const resultado = await EmailManager.enviarCorreo(destinatario, asunto, mensaje, archivoAdjunto);
+        // Enviar correo utilizando mailer.js
+        const resultado = await mailer.enviarNotificacionPago(destinatario, {
+            monto: 'Monto ejemplo',
+            fechaPago: 'Fecha ejemplo',
+            estado: 'Estado ejemplo',
+            descripcion: 'Descripción ejemplo'
+        });
         
         // Si se subió un archivo y no es necesario después del envío, eliminamos el archivo
         if (archivoAdjunto) {
@@ -42,10 +46,6 @@ router.post('/enviar', authenticateUser, verifyAdmin, upload.single('archivo'), 
         return res.status(200).json(resultado); // Respuesta exitosa
     } catch (error) {
         // Manejar errores específicos si es necesario
-        if (error.message.includes('formato válido')) {
-            return res.status(400).json({ mensaje: 'Error de formato en el correo: ' + error.message }); // Error de formato de correo
-        }
-        // Manejar errores de envío de correo
         console.error('Error al enviar el correo: ', error); // Log de error
         return res.status(500).json({ mensaje: 'Error al enviar el correo: ' + error.message }); // Error general
     }

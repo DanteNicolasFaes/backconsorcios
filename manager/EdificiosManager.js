@@ -5,7 +5,7 @@ const UsuariosManager = require('./UsuariosManager'); // Importar UsuariosManage
 class EdificiosManager {
     constructor() {
         this.db = getFirestore();
-        this.collectionName = 'edificios'; // Nombre de la colección en Firestore
+        this.collectionName = process.env.FIREBASE_EDIFICIOS_COLLECTION || 'edificios'; // Nombre de la colección en Firestore
     }
 
     // Función para crear un nuevo edificio
@@ -15,27 +15,34 @@ class EdificiosManager {
             throw new Error('Acceso no autorizado: solo el administrador puede crear edificios.');
         }
 
-        // Validar los campos requeridos
+        // Validación de los campos requeridos y de cantidadUnidades
         const { nombre, direccion, cantidadUnidades } = data;
-        if (!nombre || !direccion || !cantidadUnidades) {
-            throw new Error('Faltan datos obligatorios: nombre, dirección y cantidad de unidades.');
+        if (!nombre || !direccion || !cantidadUnidades || typeof cantidadUnidades !== 'number' || cantidadUnidades <= 0) {
+            throw new Error('Datos inválidos: asegúrate de que nombre, dirección y cantidad de unidades sean correctos.');
         }
 
         try {
-            // Crear el edificio
+            // Crear el edificio en Firestore
             const nuevoEdificio = await addDoc(collection(this.db, this.collectionName), data);
 
-            // Obtener el administrador para notificar sobre el nuevo edificio
-            const administrador = await UsuariosManager.obtenerAdministrador();
-
-            // Enviar notificación por correo al administrador si existe un email válido
-            if (administrador && administrador.email) {
-                await enviarNotificacionEdificio(administrador.email, nuevoEdificio.id, data);
-            }
+            // Llamar a la función asíncrona para enviar notificación al administrador
+            this.enviarNotificacionAdministrador(nuevoEdificio.id, data);
 
             return { id: nuevoEdificio.id, ...data };
         } catch (error) {
             throw new Error('Error al crear el edificio en Firestore: ' + error.message);
+        }
+    }
+
+    // Función para enviar notificación al administrador (asíncrona)
+    async enviarNotificacionAdministrador(nuevoEdificioId, data) {
+        try {
+            const administrador = await UsuariosManager.obtenerAdministrador();
+            if (administrador && administrador.email) {
+                await enviarNotificacionEdificio(administrador.email, nuevoEdificioId, data);
+            }
+        } catch (error) {
+            console.error('Error al enviar la notificación por correo:', error.message);
         }
     }
 
@@ -54,7 +61,7 @@ class EdificiosManager {
         try {
             const edificioDoc = await getDoc(doc(this.db, this.collectionName, id));
             if (!edificioDoc.exists()) {
-                throw new Error('Edificio no encontrado en Firestore');
+                return { mensaje: 'Edificio no encontrado en Firestore' };
             }
             return { id: edificioDoc.id, ...edificioDoc.data() };
         } catch (error) {
@@ -64,6 +71,11 @@ class EdificiosManager {
 
     // Función para actualizar un edificio existente
     async actualizarEdificio(id, data) {
+        // Validación de cantidadUnidades si se actualiza
+        if (data.cantidadUnidades && (typeof data.cantidadUnidades !== 'number' || data.cantidadUnidades <= 0)) {
+            throw new Error('Datos inválidos: cantidad de unidades debe ser un número positivo.');
+        }
+
         try {
             await updateDoc(doc(this.db, this.collectionName, id), data);
             return { id, ...data };

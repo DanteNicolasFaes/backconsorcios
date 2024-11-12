@@ -1,6 +1,5 @@
-// /manager/EmailManager.js
 require('dotenv').config(); // Cargar las variables de entorno desde el archivo .env
-const nodemailer = require('nodemailer');
+const mailer = require('../services/mailer'); // Importar el servicio de correo
 const admin = require('firebase-admin'); // Importar Firebase Admin
 
 // Inicializa Firebase Admin con las credenciales adecuadas
@@ -18,14 +17,30 @@ class EmailManager {
     static async enviarCorreo(destinatario, asunto, mensaje, archivoAdjunto = null) {
         this.validarCorreo(destinatario); // Validar el destinatario
 
-        const transportador = this.configurarTransportador(); // Configurar el transportador
-        const opcionesCorreo = this.crearOpcionesCorreo(destinatario, asunto, mensaje, archivoAdjunto); // Crear opciones del correo
+        // Configuración del correo
+        const opcionesCorreo = {
+            from: process.env.SMTP_USER,
+            to: destinatario,
+            subject: asunto,
+            text: mensaje,
+            html: `<p>${mensaje}</p>`,
+        };
+
+        if (archivoAdjunto) {
+            opcionesCorreo.attachments = [{ path: archivoAdjunto }];
+        }
 
         try {
-            const info = await transportador.sendMail(opcionesCorreo);
-            console.log('Correo enviado: %s', info.messageId);
+            // Enviar el correo utilizando el servicio mailer
+            await mailer.enviarNotificacionPago(destinatario, {
+                monto: 'Monto ejemplo',
+                fechaPago: 'Fecha ejemplo',
+                estado: 'Estado ejemplo',
+                descripcion: 'Descripción ejemplo'
+            });
+
             await this.registrarCorreoEnHistorial(destinatario, asunto); // Registrar el correo enviado
-            return { mensaje: 'Correo enviado con éxito', messageId: info.messageId };
+            return { mensaje: 'Correo enviado con éxito' };
         } catch (error) {
             console.error('Error al enviar el correo: ', error);
             throw new Error('Error al enviar el correo: ' + error.message); // Mejorar el mensaje de error
@@ -37,37 +52,6 @@ class EmailManager {
         if (!destinatario || typeof destinatario !== 'string' || !/\S+@\S+\.\S+/.test(destinatario)) {
             throw new Error('El destinatario es obligatorio y debe tener un formato válido.');
         }
-    }
-
-    // Método privado para configurar el transportador
-    static configurarTransportador() {
-        return nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT) || 587, // Asegurarse de que el puerto sea un número
-            secure: process.env.SMTP_PORT == 465,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
-    }
-
-    // Método privado para crear las opciones del correo
-    static crearOpcionesCorreo(destinatario, asunto, mensaje, archivoAdjunto) {
-        const opciones = {
-            from: process.env.SMTP_USER,
-            to: destinatario,
-            subject: asunto,
-            text: mensaje,
-            html: `<p>${mensaje}</p>`,
-        };
-
-        // Añadir archivo adjunto si existe
-        if (archivoAdjunto) {
-            opciones.attachments = [{ path: archivoAdjunto }];
-        }
-
-        return opciones;
     }
 
     // Método para registrar correos enviados en Firestore

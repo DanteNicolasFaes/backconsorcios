@@ -1,4 +1,3 @@
-// /services/mailer.js
 const nodemailer = require('nodemailer'); // Asegúrate de instalar nodemailer con npm
 
 // Configuración del transportador de correo

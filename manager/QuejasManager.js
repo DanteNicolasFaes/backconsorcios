@@ -1,4 +1,3 @@
-// /manager/QuejasManager.js
 const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore'); // Importar funciones de Firestore
 const { getStorage, ref, uploadBytes, getDownloadURL } = require('firebase/storage'); // Importar funciones de Firebase Storage
 
@@ -6,9 +5,16 @@ const db = getFirestore(); // Inicializar Firestore
 const storage = getStorage(); // Inicializar Storage
 
 class QuejasManager {
+    // Método privado para subir archivo y obtener la URL
+    static async _subirArchivoYObtenerUrl(archivo) {
+        if (!archivo) return null;
+        const archivoRef = ref(storage, `quejas/${archivo.originalname}`);
+        await uploadBytes(archivoRef, archivo.buffer);
+        return await getDownloadURL(archivoRef);
+    }
+
     // Método para crear una nueva queja
     static async crearQueja(queja, archivo, unidadFuncionalId, esPropietario) {
-        // Validaciones
         if (!queja.contenido || typeof queja.contenido !== 'string') {
             throw new Error('El contenido de la queja es obligatorio y debe ser una cadena de texto.');
         }
@@ -20,22 +26,13 @@ class QuejasManager {
         }
 
         try {
-            let archivoUrl = null; // Variable para almacenar la URL del archivo
-
-            // Si se proporciona un archivo, subirlo a Firebase Storage
-            if (archivo) {
-                const archivoRef = ref(storage, `quejas/${archivo.originalname}`);
-                await uploadBytes(archivoRef, archivo.buffer);
-                archivoUrl = await getDownloadURL(archivoRef);
-            }
-
-            // Crear la queja en Firestore
+            const archivoUrl = await this._subirArchivoYObtenerUrl(archivo);
             const nuevaQuejaRef = await addDoc(collection(db, 'quejas'), {
                 contenido: queja.contenido,
-                unidadFuncionalId: unidadFuncionalId,
+                unidadFuncionalId,
                 estado: 'abierta',
-                fechaCreacion: new Date().toISOString(),
-                archivoUrl: archivoUrl
+                fechaCreacion: Date.now(),
+                archivoUrl
             });
 
             return { id: nuevaQuejaRef.id, ...queja, estado: 'abierta', archivoUrl };
@@ -48,8 +45,7 @@ class QuejasManager {
     static async obtenerQuejas() {
         try {
             const snapshot = await getDocs(collection(db, 'quejas'));
-            const quejas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            return quejas;
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             throw new Error('Error al listar las quejas: ' + error.message);
         }
@@ -77,11 +73,8 @@ class QuejasManager {
             const quejaRef = doc(db, 'quejas', id);
             const datos = { ...datosActualizados };
 
-            // Si se proporciona un archivo, subirlo y agregar la URL
             if (archivo) {
-                const archivoRef = ref(storage, `quejas/${archivo.originalname}`);
-                await uploadBytes(archivoRef, archivo.buffer);
-                datos.archivoUrl = await getDownloadURL(archivoRef);
+                datos.archivoUrl = await this._subirArchivoYObtenerUrl(archivo);
             }
 
             await updateDoc(quejaRef, datos);
@@ -99,7 +92,7 @@ class QuejasManager {
 
         try {
             const quejaRef = doc(db, 'quejas', id);
-            await updateDoc(quejaRef, { respuesta: respuesta });
+            await updateDoc(quejaRef, { respuesta });
             return { message: 'Respuesta añadida a la queja con éxito' };
         } catch (error) {
             throw new Error('Error al responder a la queja: ' + error.message);
@@ -122,4 +115,4 @@ class QuejasManager {
     }
 }
 
-module.exports = QuejasManager; // Exportar la clase para usarla en otros módulos
+module.exports = QuejasManager;
