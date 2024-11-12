@@ -1,4 +1,3 @@
-// routes/encargados.js
 const express = require('express');
 const {
     crearEncargado,
@@ -14,11 +13,11 @@ const router = express.Router();
 
 // Ruta para crear un nuevo encargado
 router.post('/', authenticateUser, verifyAdmin, async (req, res) => {
-    const { nombre, telefono, email } = req.body;
+    const { nombre, telefono, email, cuil, cargo, categoriaEncargado, antiguedad } = req.body;
 
     // Validación de campos obligatorios
-    if (!nombre || !telefono || !email) {
-        return res.status(400).json({ error: 'Faltan datos necesarios: nombre, teléfono y correo electrónico son obligatorios.' });
+    if (!nombre || !telefono || !email || !cuil || !cargo || !categoriaEncargado || !antiguedad) {
+        return res.status(400).json({ error: 'Faltan datos necesarios: nombre, teléfono, correo electrónico, CUIL, cargo, categoría y antigüedad son obligatorios.' });
     }
 
     try {
@@ -57,18 +56,15 @@ router.get('/:id', authenticateUser, verifyAdmin, async (req, res) => {
 
 // Ruta para actualizar un encargado
 router.put('/:id', authenticateUser, verifyAdmin, async (req, res) => {
-    const { nombre, telefono, email } = req.body;
+    const { nombre, telefono, email, cuil, cargo, categoriaEncargado, antiguedad } = req.body;
 
     // Validación de datos antes de la actualización
-    if (!nombre && !telefono && !email) {
+    if (!nombre && !telefono && !email && !cuil && !cargo && !categoriaEncargado && !antiguedad) {
         return res.status(400).json({ error: 'No se ha enviado ningún dato para actualizar.' });
     }
 
     try {
-        const result = await actualizarEncargado(req.params.id, req.body);
-        if (!result) {
-            return res.status(404).json({ error: 'Encargado no encontrado.' });
-        }
+        await actualizarEncargado(req.params.id, req.body);
         res.status(200).json({ message: 'Encargado actualizado con éxito' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -78,10 +74,7 @@ router.put('/:id', authenticateUser, verifyAdmin, async (req, res) => {
 // Ruta para eliminar un encargado
 router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     try {
-        const result = await eliminarEncargado(req.params.id);
-        if (result.deletedCount === 0) {
-            return res.status(404).json({ error: 'Encargado no encontrado para eliminar.' });
-        }
+        await eliminarEncargado(req.params.id);
         res.status(200).json({ message: 'Encargado eliminado con éxito' });
     } catch (error) {
         res.status(500).json({ error: error.message });

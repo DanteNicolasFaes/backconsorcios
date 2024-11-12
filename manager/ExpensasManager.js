@@ -1,6 +1,6 @@
 const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore');
 const nodemailer = require('nodemailer');
-const db = getFirestore(); // Inicializar Firestore
+const db = getFirestore();
 const ConfiguracionConsorcioManager = require('./ConfiguracionConsorcioManager');
 
 class ExpensasManager {
@@ -25,7 +25,7 @@ class ExpensasManager {
 
             return { id: nuevaExpensaRef.id, ...expensa, monto: montoConIntereses };
         } catch (error) {
-            throw new Error(`Error al crear la expensa: ${error.message}`);
+            throw this.handleError(error, 'Error al crear la expensa');
         }
     }
 
@@ -33,7 +33,7 @@ class ExpensasManager {
     static calcularIntereses(expensa, configConsorcio) {
         const fechaVencimiento = new Date(expensa.fechaVencimiento);
         const fechaPago = expensa.fechaPago ? new Date(expensa.fechaPago) : new Date();
-        const diasDeMora = Math.max((fechaPago - fechaVencimiento) / (1000 * 60 * 60 * 24), 0); // Días de mora
+        const diasDeMora = Math.max((fechaPago - fechaVencimiento) / (1000 * 60 * 60 * 24), 0);
 
         const tasaInteresDiario = configConsorcio.interesPorMora || 0.005;
         const interes = diasDeMora * tasaInteresDiario * expensa.monto;
@@ -71,7 +71,7 @@ class ExpensasManager {
             await updateDoc(expensaRef, datosActualizados);
             return { id, ...datosActualizados };
         } catch (error) {
-            throw new Error(`Error al modificar la expensa: ${error.message}`);
+            throw this.handleError(error, 'Error al modificar la expensa');
         }
     }
 
@@ -82,7 +82,7 @@ class ExpensasManager {
             await deleteDoc(expensaRef);
             return { message: 'Expensa eliminada con éxito' };
         } catch (error) {
-            throw new Error(`Error al eliminar la expensa: ${error.message}`);
+            throw this.handleError(error, 'Error al eliminar la expensa');
         }
     }
 
@@ -107,8 +107,13 @@ class ExpensasManager {
             await transporter.sendMail(mailOptions);
             return { message: 'Expensa enviada por correo con éxito' };
         } catch (error) {
-            throw new Error(`Error al enviar la expensa por email: ${error.message}`);
+            throw this.handleError(error, 'Error al enviar la expensa por email');
         }
+    }
+
+    // Método para manejar errores de forma centralizada
+    static handleError(error, mensaje) {
+        return new Error(`${mensaje}: ${error.message}`);
     }
 }
 

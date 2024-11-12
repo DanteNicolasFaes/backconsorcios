@@ -3,52 +3,56 @@ const { getStorage, ref, uploadBytesResumable, getDownloadURL } = require('fireb
 const db = getFirestore();
 const storage = getStorage();
 
-// Función para crear un recibo de sueldo para un encargado específico con un archivo
+// Función para subir el archivo y obtener la URL
+const subirArchivo = async (file) => {
+    if (!file) return null; // Si no hay archivo, no hacemos nada
+
+    try {
+        const fileRef = ref(storage, `recibosSueldo/${Date.now()}-${file.originalname}`);
+        const uploadTask = uploadBytesResumable(fileRef, file.buffer);
+        
+        await uploadTask;
+        return await getDownloadURL(fileRef);
+    } catch (error) {
+        console.error('Error al subir archivo:', error);
+        throw new Error('Error al subir el archivo del recibo');
+    }
+};
+
+// Función para crear el recibo de sueldo
 const crearReciboSueldo = async (encargadoId, reciboData, file) => {
     try {
-        // Si hay un archivo, subimos a Firebase Storage
-        let fileURL = null;
-        if (file) {
-            const fileRef = ref(storage, `recibosSueldo/${Date.now()}-${file.originalname}`);
-            const uploadTask = uploadBytesResumable(fileRef, file.buffer);
+        const fileURL = await subirArchivo(file); // Subir archivo y obtener URL
 
-            // Esperar a que la carga termine y obtener la URL del archivo
-            await uploadTask;
-            fileURL = await getDownloadURL(fileRef);
-        }
-
-        // Crear el recibo en Firestore
         const nuevoRecibo = {
-            encargadoId, // Asocia el recibo al ID del encargado
+            encargadoId,
             mes: reciboData.mes,
             año: reciboData.año,
             monto: reciboData.monto,
-            detalles: reciboData.detalles, // Detalles adicionales del recibo, como bonos, descuentos, etc.
-            archivoURL: fileURL, // Guardamos la URL del archivo subido
+            detalles: reciboData.detalles,
+            archivoURL: fileURL,
         };
 
         const docRef = await addDoc(collection(db, 'recibosSueldo'), nuevoRecibo);
-        console.log("Recibo de sueldo creado con ID: ", docRef.id);
+        console.log('Recibo de sueldo creado con ID:', docRef.id);
         return docRef.id;
     } catch (error) {
-        console.error("Error al crear el recibo de sueldo: ", error);
+        console.error('Error al crear el recibo de sueldo:', error);
         throw new Error('No se pudo crear el recibo de sueldo');
     }
 };
 
-// Función para obtener todos los recibos de sueldo de un encargado específico
+// Función para obtener los recibos de sueldo de un encargado
 const obtenerRecibosPorEncargadoId = async (encargadoId) => {
     try {
         const recibosRef = collection(db, 'recibosSueldo');
-        const q = query(recibosRef, where("encargadoId", "==", encargadoId));
+        const q = query(recibosRef, where('encargadoId', '==', encargadoId));
         const querySnapshot = await getDocs(q);
-        const recibos = [];
-        querySnapshot.forEach((doc) => {
-            recibos.push({ id: doc.id, ...doc.data() });
-        });
+        
+        const recibos = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return recibos;
     } catch (error) {
-        console.error("Error al obtener los recibos de sueldo: ", error);
+        console.error('Error al obtener los recibos de sueldo:', error);
         throw new Error('No se pudo obtener los recibos de sueldo');
     }
 };

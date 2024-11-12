@@ -1,12 +1,10 @@
 const express = require('express');
 const multer = require('multer');
 const { crearReciboSueldo, obtenerRecibosPorEncargadoId } = require('../manager/RecibosSueldoManager');
-const authenticateUser = require('../middleware/authenticateUser'); // Ajusta la ruta según sea necesario
-const verifyAdmin = require('../middleware/verifyAdmin'); // Ajusta la ruta según sea necesario
+const authenticateUser = require('../middleware/authenticateUser');
+const verifyAdmin = require('../middleware/verifyAdmin');
 
-const router = express.Router();
-
-// Configuración de Multer para permitir múltiples archivos
+// Configuración de Multer para manejar la carga de archivos
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'uploads/recibos'); // Carpeta donde se guardarán los recibos
@@ -26,14 +24,16 @@ const validateReciboData = (req, res, next) => {
     if (!mes || !anio) {
         return res.status(400).json({ error: 'El mes y el año son obligatorios' });
     }
-    next(); // Si la validación pasa, continuamos
+    next();
 };
+
+const router = express.Router();
 
 // Ruta para crear un nuevo recibo de sueldo para un encargado
 router.post('/:encargadoId', authenticateUser, verifyAdmin, upload.array('archivos', 10), validateReciboData, async (req, res) => {
     try {
         // Obtener los archivos subidos
-        const archivos = req.files ? req.files : [];
+        const archivos = req.files || [];
 
         // Llamar a la función del manager para crear el recibo
         const reciboId = await crearReciboSueldo(req.params.encargadoId, req.body, archivos);
@@ -54,4 +54,4 @@ router.get('/:encargadoId', authenticateUser, verifyAdmin, async (req, res) => {
     }
 });
 
-module.exports = router; // Exportar el router para usarlo en el servidor
+module.exports = router;

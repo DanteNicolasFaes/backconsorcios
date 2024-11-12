@@ -1,172 +1,93 @@
-// routes/expensas.js
-
 const express = require('express');
 const router = express.Router();
 const ExpensasManager = require('../manager/ExpensasManager');
-const authenticateUser = require('../middleware/authenticateUser');  // Middleware de autenticación
-const verifyAdmin = require('../middleware/verifyAdmin');  // Middleware de verificación de administrador
+const authenticateUser = require('../middleware/authenticateUser');
+const verifyAdmin = require('../middleware/verifyAdmin');
 
-// Ruta para obtener todas las expensas (accesible para todos los usuarios autenticados)
+// Ruta para obtener todas las expensas
 router.get('/', authenticateUser, async (req, res) => {
     try {
         const expensas = await ExpensasManager.obtenerExpensas();
-        res.status(200).json({
-            success: true,
-            data: expensas,
-        });
+        res.status(200).json({ success: true, data: expensas });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener las expensas',
-            error: error.message,
-        });
+        res.status(500).json({ success: false, message: 'Error al obtener las expensas', error: error.message });
     }
 });
 
-// Ruta para obtener una expensa por su ID (accesible para todos los usuarios autenticados)
+// Ruta para obtener una expensa por ID
 router.get('/:id', authenticateUser, async (req, res) => {
     const { id } = req.params;
     try {
         const expensa = await ExpensasManager.obtenerExpensaPorId(id);
-        if (!expensa) {
-            return res.status(404).json({
-                success: false,
-                message: 'Expensa no encontrada',
-            });
-        }
-        res.status(200).json({
-            success: true,
-            data: expensa,
-        });
+        res.status(200).json({ success: true, data: expensa });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener la expensa',
-            error: error.message,
-        });
+        res.status(500).json({ success: false, message: 'Error al obtener la expensa', error: error.message });
     }
 });
 
 // Ruta para crear una nueva expensa (solo para administradores)
 router.post('/', authenticateUser, verifyAdmin, async (req, res) => {
     const expensa = req.body;
-    // Validación de campos obligatorios
-    if (!expensa.monto || !expensa.fecha || !expensa.edificioId) {
+    if (!expensa.monto || !expensa.fechaVencimiento || !expensa.consorcioId) {
         return res.status(400).json({
             success: false,
-            message: 'Faltan datos necesarios: monto, fecha y edificioId son obligatorios.',
+            message: 'Faltan datos necesarios: monto, fecha y consorcioId son obligatorios.',
         });
     }
 
     try {
         const expensaCreada = await ExpensasManager.crearExpensa(expensa);
-        res.status(201).json({
-            success: true,
-            message: 'Expensa creada con éxito',
-            data: expensaCreada,
-        });
+        res.status(201).json({ success: true, message: 'Expensa creada con éxito', data: expensaCreada });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error al crear la expensa',
-            error: error.message,
-        });
+        res.status(500).json({ success: false, message: 'Error al crear la expensa', error: error.message });
     }
 });
 
-// Ruta para modificar una expensa existente (solo para administradores)
+// Ruta para modificar una expensa existente
 router.put('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     const { id } = req.params;
     const datosActualizados = req.body;
 
-    // Validación de datos antes de la actualización
-    if (!datosActualizados.monto && !datosActualizados.fecha && !datosActualizados.edificioId) {
-        return res.status(400).json({
-            success: false,
-            message: 'No se ha enviado ningún dato para actualizar.',
-        });
+    if (!Object.keys(datosActualizados).length) {
+        return res.status(400).json({ success: false, message: 'No se ha enviado ningún dato para actualizar.' });
     }
 
     try {
         const respuesta = await ExpensasManager.modificarExpensa(id, datosActualizados);
-        if (!respuesta) {
-            return res.status(404).json({
-                success: false,
-                message: 'Expensa no encontrada para actualizar',
-            });
-        }
-        res.status(200).json({
-            success: true,
-            message: 'Expensa actualizada con éxito',
-            data: respuesta,
-        });
+        res.status(200).json({ success: true, message: 'Expensa actualizada con éxito', data: respuesta });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error al modificar la expensa',
-            error: error.message,
-        });
+        res.status(500).json({ success: false, message: 'Error al modificar la expensa', error: error.message });
     }
 });
 
-// Ruta para eliminar una expensa (solo para administradores)
+// Ruta para eliminar una expensa
 router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     const { id } = req.params;
     try {
-        const respuesta = await ExpensasManager.eliminarExpensa(id);
-        if (!respuesta) {
-            return res.status(404).json({
-                success: false,
-                message: 'Expensa no encontrada para eliminar',
-            });
-        }
-        res.status(200).json({
-            success: true,
-            message: 'Expensa eliminada con éxito',
-        });
+        await ExpensasManager.eliminarExpensa(id);
+        res.status(200).json({ success: true, message: 'Expensa eliminada con éxito' });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error al eliminar la expensa',
-            error: error.message,
-        });
+        res.status(500).json({ success: false, message: 'Error al eliminar la expensa', error: error.message });
     }
 });
 
-// Ruta para enviar la expensa por correo electrónico (solo para administradores)
+// Ruta para enviar la expensa por correo electrónico
 router.post('/enviar/:id', authenticateUser, verifyAdmin, async (req, res) => {
     const { id } = req.params;
-    const { email } = req.body; // Asumiendo que el email viene en el cuerpo de la solicitud
+    const { email } = req.body;
 
-    // Validación de correo electrónico
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
-        return res.status(400).json({
-            success: false,
-            message: 'Correo electrónico inválido.',
-        });
+    if (!email) {
+        return res.status(400).json({ success: false, message: 'El email es obligatorio.' });
     }
 
     try {
         const expensa = await ExpensasManager.obtenerExpensaPorId(id);
-        if (!expensa) {
-            return res.status(404).json({
-                success: false,
-                message: 'Expensa no encontrada para enviar',
-            });
-        }
-        const resultado = await ExpensasManager.enviarExpensaPorEmail(expensa, email);
-        res.status(200).json({
-            success: true,
-            message: 'Expensa enviada con éxito',
-            data: resultado,
-        });
+        await ExpensasManager.enviarExpensaPorEmail(expensa, email); // Solo ejecuta la función
+        res.status(200).json({ success: true, message: 'Expensa enviada por correo con éxito' });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error al enviar la expensa',
-            error: error.message,
-        });
+        res.status(500).json({ success: false, message: 'Error al enviar la expensa por correo', error: error.message });
     }
 });
+
 
 module.exports = router;

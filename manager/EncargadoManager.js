@@ -1,5 +1,4 @@
-// manager/EncargadoManager.js
-const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore'); 
+const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore');
 const db = getFirestore();
 
 // Función para crear un nuevo encargado
