@@ -24,7 +24,7 @@ router.post('/', authenticateUser, verifyAdmin, upload.array('archivos', 5), asy
         };
 
         // Pasar los archivos a `UsuariosManager` para que los procese según se necesite
-        const usuarioCreado = await UsuariosManager.crearUsuario(nuevoUsuario, true, req.files); // Pasar esAdmin como true
+        const usuarioCreado = await UsuariosManager.crearUsuario(nuevoUsuario, req.user, req.files); // Pasar el usuario autenticado
         res.status(201).json(usuarioCreado);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
@@ -34,7 +34,7 @@ router.post('/', authenticateUser, verifyAdmin, upload.array('archivos', 5), asy
 // Ruta para obtener todos los usuarios
 router.get('/', authenticateUser, async (req, res) => {
     try {
-        const usuarios = await UsuariosManager.obtenerUsuarios();
+        const usuarios = await UsuariosManager.obtenerUsuarios(req.user); // Pasar el usuario autenticado
         res.status(200).json(usuarios);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
@@ -44,7 +44,7 @@ router.get('/', authenticateUser, async (req, res) => {
 // Ruta para obtener un usuario por su ID
 router.get('/:id', authenticateUser, async (req, res) => {
     try {
-        const usuario = await UsuariosManager.obtenerUsuarioPorId(req.params.id);
+        const usuario = await UsuariosManager.obtenerUsuarioPorId(req.params.id, req.user); // Pasar el usuario autenticado
         res.status(200).json(usuario);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
@@ -62,7 +62,7 @@ router.put('/:id', authenticateUser, verifyAdmin, upload.array('archivos', 5), a
         };
 
         // Llamar a `UsuariosManager` para actualizar el usuario con los nuevos datos
-        const usuario = await UsuariosManager.actualizarUsuario(req.params.id, usuarioActualizado, true, req.files); // Pasar esAdmin como true
+        const usuario = await UsuariosManager.actualizarUsuario(req.params.id, usuarioActualizado, req.user, req.files); // Pasar el usuario autenticado
         res.status(200).json(usuario);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
@@ -72,7 +72,7 @@ router.put('/:id', authenticateUser, verifyAdmin, upload.array('archivos', 5), a
 // Ruta para eliminar un usuario
 router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     try {
-        const mensaje = await UsuariosManager.eliminarUsuario(req.params.id, true); // Pasar esAdmin como true
+        const mensaje = await UsuariosManager.eliminarUsuario(req.params.id, req.user); // Pasar el usuario autenticado
         res.status(200).json(mensaje);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });

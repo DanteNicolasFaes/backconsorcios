@@ -1,50 +1,58 @@
-import express from 'express';
-import multer from 'multer';
-import { crearReciboSueldo, obtenerRecibosPorEncargadoId } from '../manager/RecibosSueldoManager.js';
-import authenticateUser from '../middleware/authenticateUser.js';
-import verifyAdmin from '../middleware/verifyAdmin.js';
+import { db } from '../firebaseConfig.js';
+import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
-// Configuración de Multer para manejar la carga de archivos
-const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
-const upload = multer({ storage });
-
-// Middleware de validación para los datos del recibo de sueldo
-const validateReciboData = (req, res, next) => {
-    const { salario, mes, anio } = req.body;
-    if (!salario || isNaN(salario) || salario <= 0) {
-        return res.status(400).json({ error: 'El salario debe ser un número positivo' });
+class UsuariosManager {
+    // Método para crear un nuevo usuario
+    async crearUsuario(usuarioData, usuarioAutenticado, archivos) {
+        if (!usuarioAutenticado.isAdmin) {
+            throw new Error('Acceso denegado. Solo los administradores pueden crear usuarios.');
+        }
+        const nuevoUsuario = await addDoc(collection(db, 'usuarios'), usuarioData);
+        return { id: nuevoUsuario.id, ...usuarioData };
     }
-    if (!mes || !anio) {
-        return res.status(400).json({ error: 'El mes y el año son obligatorios' });
+
+    // Método para obtener todos los usuarios
+    async obtenerUsuarios(usuarioAutenticado) {
+        if (!usuarioAutenticado.isAdmin) {
+            throw new Error('Acceso denegado. Solo los administradores pueden obtener la lista de usuarios.');
+        }
+        const usuariosSnapshot = await getDocs(collection(db, 'usuarios'));
+        return usuariosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
-    next();
-};
 
-const router = express.Router();
-
-// Ruta para crear un nuevo recibo de sueldo para un encargado
-router.post('/:encargadoId', authenticateUser, verifyAdmin, upload.array('archivos', 10), validateReciboData, async (req, res) => {
-    try {
-        // Obtener los archivos subidos
-        const archivos = req.files || [];
-
-        // Llamar a la función del manager para crear el recibo
-        const reciboId = await crearReciboSueldo(req.params.encargadoId, req.body, archivos);
-
-        res.status(201).json({ message: 'Recibo de sueldo creado con éxito', reciboId });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    // Método para obtener un usuario por ID
+    async obtenerUsuarioPorId(usuarioId, usuarioAutenticado) {
+        if (!usuarioAutenticado.isAdmin) {
+            throw new Error('Acceso denegado. Solo los administradores pueden obtener información de usuarios.');
+        }
+        const usuarioDoc = await getDoc(doc(db, 'usuarios', usuarioId));
+        if (usuarioDoc.exists()) {
+            return { id: usuarioDoc.id, ...usuarioDoc.data() };
+        } else {
+            throw new Error('Usuario no encontrado');
+        }
     }
-});
 
-// Ruta para obtener todos los recibos de sueldo de un encargado
-router.get('/:encargadoId', authenticateUser, verifyAdmin, async (req, res) => {
-    try {
-        const recibos = await obtenerRecibosPorEncargadoId(req.params.encargadoId);
-        res.status(200).json(recibos);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    // Método para actualizar un usuario
+    async actualizarUsuario(usuarioId, usuarioData, usuarioAutenticado, archivos) {
+        if (!usuarioAutenticado.isAdmin) {
+            throw new Error('Acceso denegado. Solo los administradores pueden actualizar usuarios.');
+        }
+        const usuarioRef = doc(db, 'usuarios', usuarioId);
+        await updateDoc(usuarioRef, usuarioData);
+        const usuarioActualizado = await getDoc(usuarioRef);
+        return { id: usuarioActualizado.id, ...usuarioActualizado.data() };
     }
-});
 
-export default router;
+    // Método para eliminar un usuario
+    async eliminarUsuario(usuarioId, usuarioAutenticado) {
+        if (!usuarioAutenticado.isAdmin) {
+            throw new Error('Acceso denegado. Solo los administradores pueden eliminar usuarios.');
+        }
+        const usuarioRef = doc(db, 'usuarios', usuarioId);
+        await deleteDoc(usuarioRef);
+        return { mensaje: 'Usuario eliminado con éxito' };
+    }
+}
+
+export default new UsuariosManager();
