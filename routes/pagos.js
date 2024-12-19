@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import PagosManager from '../manager/PagosManager.js';
-import authenticateUser from '../middleware/authenticateUser.js';
+import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
 import verifyAdmin from '../middleware/verifyAdmin.js';
 
 // Configuración de Multer para manejo de archivos
