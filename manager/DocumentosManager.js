@@ -1,6 +1,6 @@
-const { getFirestore, collection, addDoc, getDocs, doc, getDoc, deleteDoc, updateDoc } = require('firebase/firestore');
-const db = getFirestore(); // Inicializar Firestore
-const uploadAndStoreUrls = require('../middleware/uploads'); // Importar la función que maneja las URLs de los archivos
+import { db } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
+import { collection, addDoc, getDocs, doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { uploadAndStoreUrls } from '../middleware/uploads.js'; // Importar la función que maneja las URLs de los archivos
 
 class DocumentosManager {
     // Método para subir un nuevo documento (ahora soporta múltiples archivos)
@@ -9,26 +9,27 @@ class DocumentosManager {
 
         try {
             // Obtener las rutas de los archivos subidos y sus URLs
-            const archivosUrls = await uploadAndStoreUrls(archivos); 
-
-            const nuevoDocumentoRef = await addDoc(collection(db, 'documentos'), {
-                categoria: documento.categoria,
-                fecha: documento.fecha,
-                archivos: archivosUrls,  // Ahora es un array con las URLs de los archivos
-                descripcion: documento.descripcion || ''  // Descripción opcional del documento
+            const archivosUrls = await uploadAndStoreUrls(archivos);
+            const docRef = await addDoc(collection(db, 'documentos'), {
+                ...documento,
+                archivos: archivosUrls,
+                fechaCreacion: new Date(),
             });
-
-            return { id: nuevoDocumentoRef.id, ...documento, archivos: archivosUrls };
+            return { id: docRef.id, ...documento, archivos: archivosUrls };
         } catch (error) {
-            throw new Error(`Error al subir los documentos: ${error.message}`);
+            throw new Error(`Error al subir el documento: ${error.message}`);
         }
     }
 
     // Método para listar todos los documentos (accesible para todos)
     static async listarDocumentos() {
         try {
-            const snapshot = await getDocs(collection(db, 'documentos'));
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const querySnapshot = await getDocs(collection(db, 'documentos'));
+            const documentos = [];
+            querySnapshot.forEach((doc) => {
+                documentos.push({ id: doc.id, ...doc.data() });
+            });
+            return documentos;
         } catch (error) {
             throw new Error(`Error al listar los documentos: ${error.message}`);
         }
@@ -37,12 +38,14 @@ class DocumentosManager {
     // Método para obtener un documento específico por ID (accesible para todos)
     static async obtenerDocumentoPorId(id) {
         try {
-            const documentoRef = doc(db, 'documentos', id);
-            const documentoSnap = await getDoc(documentoRef);
-            if (!documentoSnap.exists()) {
-                throw new Error('Documento no encontrado');
+            const docRef = doc(db, 'documentos', id);
+            const docSnap = await getDoc(docRef);
+
+            if (!docSnap.exists()) {
+                throw new Error(`El documento con ID ${id} no fue encontrado.`);
             }
-            return { id: documentoSnap.id, ...documentoSnap.data() };
+
+            return { id: docSnap.id, ...docSnap.data() };
         } catch (error) {
             throw new Error(`Error al obtener el documento: ${error.message}`);
         }
@@ -51,14 +54,16 @@ class DocumentosManager {
     // Método para actualizar un documento (ahora también soporta múltiples archivos)
     static async actualizarDocumento(id, datosActualizados, archivos) {
         try {
-            const documentoRef = doc(db, 'documentos', id);
-            const updates = { ...datosActualizados };
+            const docRef = doc(db, 'documentos', id);
+
+            // Si hay archivos nuevos, súbelos y obtén sus URLs
             if (archivos && archivos.length > 0) {
-                const archivosUrls = await uploadAndStoreUrls(archivos);  // Obtener URLs de los nuevos archivos
-                updates.archivos = archivosUrls;  // Actualizamos el array de archivos con las URLs
+                const archivosUrls = await uploadAndStoreUrls(archivos);
+                datosActualizados.archivos = archivosUrls;
             }
-            await updateDoc(documentoRef, updates);
-            return { message: 'Documento actualizado con éxito' };
+
+            await updateDoc(docRef, datosActualizados);
+            return { id, ...datosActualizados };
         } catch (error) {
             throw new Error(`Error al actualizar el documento: ${error.message}`);
         }
@@ -67,9 +72,9 @@ class DocumentosManager {
     // Método para eliminar un documento (solo para administradores)
     static async eliminarDocumento(id) {
         try {
-            const documentoRef = doc(db, 'documentos', id);
-            await deleteDoc(documentoRef);
-            return { message: 'Documento eliminado con éxito' };
+            const docRef = doc(db, 'documentos', id);
+            await deleteDoc(docRef);
+            return { message: 'Documento eliminado correctamente.' };
         } catch (error) {
             throw new Error(`Error al eliminar el documento: ${error.message}`);
         }
@@ -79,17 +84,17 @@ class DocumentosManager {
     static validarDocumento(documento, archivos) {
         // Verificar categoría
         if (!documento.categoria || typeof documento.categoria !== 'string') {
-            throw new Error('La categoría es obligatoria y debe ser una cadena de texto.');
+            throw new Error('La categoría del documento es inválida.');
         }
         // Verificar fecha
         if (!documento.fecha || isNaN(new Date(documento.fecha).getTime())) {
-            throw new Error('La fecha es obligatoria y debe tener un formato válido.');
+            throw new Error('La fecha del documento es inválida.');
         }
         // Verificar archivos
         if (!archivos || archivos.length === 0) {
-            throw new Error('Al menos un archivo debe ser proporcionado.');
+            throw new Error('Se requiere al menos un archivo.');
         }
     }
 }
 
-module.exports = DocumentosManager;
+export default DocumentosManager;

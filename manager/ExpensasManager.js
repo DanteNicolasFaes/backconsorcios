@@ -1,7 +1,7 @@
-const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore');
-const nodemailer = require('nodemailer');
-const db = getFirestore();
-const ConfiguracionConsorcioManager = require('./ConfiguracionConsorcioManager');
+import { db } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
+import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import nodemailer from 'nodemailer';
+import ConfiguracionConsorcioManager from './ConfiguracionConsorcioManager.js';
 
 class ExpensasManager {
     // Método para crear una nueva expensa
@@ -50,18 +50,26 @@ class ExpensasManager {
 
     // Método para obtener todas las expensas
     static async obtenerExpensas() {
-        const expensasSnap = await getDocs(collection(db, 'expensas'));
-        return expensasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        try {
+            const expensasSnap = await getDocs(collection(db, 'expensas'));
+            return expensasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            throw this.handleError(error, 'Error al obtener las expensas');
+        }
     }
 
     // Obtener una expensa por ID
     static async obtenerExpensaPorId(id) {
-        const expensaRef = doc(db, 'expensas', id);
-        const expensaSnap = await getDoc(expensaRef);
-        if (!expensaSnap.exists()) {
-            throw new Error('Expensa no encontrada');
+        try {
+            const expensaRef = doc(db, 'expensas', id);
+            const expensaSnap = await getDoc(expensaRef);
+            if (!expensaSnap.exists()) {
+                throw new Error('Expensa no encontrada');
+            }
+            return { id: expensaSnap.id, ...expensaSnap.data() };
+        } catch (error) {
+            throw this.handleError(error, 'Error al obtener la expensa');
         }
-        return { id: expensaSnap.id, ...expensaSnap.data() };
     }
 
     // Modificar una expensa
@@ -92,13 +100,13 @@ class ExpensasManager {
             const transporter = nodemailer.createTransport({
                 service: 'gmail',
                 auth: {
-                    user: 'tucorreo@gmail.com',
-                    pass: 'tucontraseña',
+                    user: process.env.SMTP_USER,
+                    pass: process.env.SMTP_PASS,
                 },
             });
 
             const mailOptions = {
-                from: 'tucorreo@gmail.com',
+                from: process.env.SMTP_USER,
                 to: email,
                 subject: `Expensa correspondiente a ${expensa.mes}/${expensa.anio}`,
                 text: `Detalle de la expensa: \nMonto: ${expensa.monto}\nDescripción: ${expensa.descripcion}\nFecha Vencimiento: ${expensa.fechaVencimiento}`,
@@ -117,4 +125,4 @@ class ExpensasManager {
     }
 }
 
-module.exports = ExpensasManager;
+export default ExpensasManager;

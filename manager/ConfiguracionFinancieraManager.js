@@ -1,19 +1,12 @@
-// manager/ConfiguracionFinancieraManager.js
-const admin = require('firebase-admin');
-
-// Inicializa Firebase si aún no está inicializado
-if (!admin.apps.length) {
-    admin.initializeApp();
-}
-const db = admin.firestore();  // Acceso a Firestore
+import { db } from '../firebaseConfig.js';
 
 // Función para obtener la configuración financiera de un consorcio desde Firestore
-const obtenerConfiguracion = async (consorcioId) => {
+export const obtenerConfiguracion = async (consorcioId) => {
     try {
         const configuracionRef = db.collection('configuracionFinanciera').doc(consorcioId);
         const doc = await configuracionRef.get();
 
-        if (!doc.exists) {
+        if (!doc.exists()) {
             throw new Error(`La configuración financiera para el consorcio con ID ${consorcioId} no fue encontrada.`);
         }
 
@@ -24,7 +17,7 @@ const obtenerConfiguracion = async (consorcioId) => {
 };
 
 // Función para crear o actualizar la configuración financiera de un consorcio en Firestore
-const crearOActualizarConfiguracion = async (consorcioId, configuracion) => {
+export const crearOActualizarConfiguracion = async (consorcioId, configuracion) => {
     try {
         const configuracionRef = db.collection('configuracionFinanciera').doc(consorcioId);
 
@@ -41,7 +34,7 @@ const crearOActualizarConfiguracion = async (consorcioId, configuracion) => {
 };
 
 // Función para actualizar la configuración financiera de un consorcio
-const actualizarConfiguracion = async (consorcioId, configuracion) => {
+export const actualizarConfiguracion = async (consorcioId, configuracion) => {
     try {
         const configuracionRef = db.collection('configuracionFinanciera').doc(consorcioId);
 
@@ -64,7 +57,7 @@ const actualizarConfiguracion = async (consorcioId, configuracion) => {
 };
 
 // Función para eliminar la configuración financiera de un consorcio
-const eliminarConfiguracion = async (consorcioId) => {
+export const eliminarConfiguracion = async (consorcioId) => {
     try {
         const configuracionRef = db.collection('configuracionFinanciera').doc(consorcioId);
 
@@ -81,11 +74,4 @@ const eliminarConfiguracion = async (consorcioId) => {
     } catch (error) {
         throw new Error(`Error al eliminar la configuración financiera: ${error.message}`);
     }
-};
-
-module.exports = {
-    obtenerConfiguracion,
-    crearOActualizarConfiguracion,
-    actualizarConfiguracion,
-    eliminarConfiguracion,
 };

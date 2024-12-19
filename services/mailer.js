@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer'); // Asegúrate de instalar nodemailer con npm
+import nodemailer from 'nodemailer'; // Asegúrate de instalar nodemailer con npm
 
 // Configuración del transportador de correo
 const transporter = nodemailer.createTransport({
@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Función para enviar notificación de pago
-const enviarNotificacionPago = async (email, pago) => {
+export const enviarNotificacionPago = async (email, pago) => {
     // Validación de datos de pago
     if (!pago.monto || !pago.fechaPago || !pago.estado) {
         throw new Error('Faltan datos del pago.');
@@ -42,5 +42,3 @@ const enviarNotificacionPago = async (email, pago) => {
         throw new Error(`No se pudo enviar el correo: ${error.message}`);
     }
 };
-
-module.exports = { enviarNotificacionPago };

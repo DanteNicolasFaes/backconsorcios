@@ -1,20 +1,18 @@
-const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore'); // Importar funciones de Firestore
-const { getStorage, ref, uploadBytes, getDownloadURL } = require('firebase/storage'); // Importar funciones de Firebase Storage
-
-const db = getFirestore(); // Inicializar Firestore
-const storage = getStorage(); // Inicializar Storage
+import { db, storage } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
+import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 class QuejasManager {
     // Método privado para subir archivo y obtener la URL
     static async _subirArchivoYObtenerUrl(archivo) {
         if (!archivo) return null;
-        const archivoRef = ref(storage, `quejas/${archivo.originalname}`);
+        const archivoRef = ref(storage, `quejas/${Date.now()}-${archivo.originalname}`);
         await uploadBytes(archivoRef, archivo.buffer);
         return await getDownloadURL(archivoRef);
     }
 
     // Método para crear una nueva queja
-    static async crearQueja(queja, archivo, unidadFuncionalId, esPropietario) {
+    static async crearQueja(queja, archivos, unidadFuncionalId, esPropietario) {
         if (!queja.contenido || typeof queja.contenido !== 'string') {
             throw new Error('El contenido de la queja es obligatorio y debe ser una cadena de texto.');
         }
@@ -26,16 +24,16 @@ class QuejasManager {
         }
 
         try {
-            const archivoUrl = await this._subirArchivoYObtenerUrl(archivo);
+            const archivoUrls = await Promise.all(archivos.map(archivo => this._subirArchivoYObtenerUrl(archivo)));
             const nuevaQuejaRef = await addDoc(collection(db, 'quejas'), {
                 contenido: queja.contenido,
                 unidadFuncionalId,
                 estado: 'abierta',
                 fechaCreacion: Date.now(),
-                archivoUrl
+                archivoUrls
             });
 
-            return { id: nuevaQuejaRef.id, ...queja, estado: 'abierta', archivoUrl };
+            return { id: nuevaQuejaRef.id, ...queja, estado: 'abierta', archivoUrls };
         } catch (error) {
             throw new Error('Error al crear la queja: ' + error.message);
         }
@@ -115,4 +113,4 @@ class QuejasManager {
     }
 }
 
-module.exports = QuejasManager;
+export default QuejasManager;

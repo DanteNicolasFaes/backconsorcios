@@ -1,13 +1,13 @@
-const express = require('express');
-const {
+import express from 'express';
+import {
     crearEncargado,
     obtenerEncargados,
     obtenerEncargadoPorId,
     actualizarEncargado,
     eliminarEncargado,
-} = require('../manager/EncargadoManager');
-const authenticateUser = require('../middleware/authenticateUser'); 
-const verifyAdmin = require('../middleware/verifyAdmin'); 
+} from '../manager/EncargadoManager.js';
+import authenticateUser from '../middleware/authenticateUser.js';
+import verifyAdmin from '../middleware/verifyAdmin.js';
 
 const router = express.Router();
 
@@ -81,4 +81,4 @@ router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

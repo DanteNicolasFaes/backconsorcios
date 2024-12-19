@@ -1,20 +1,19 @@
-const { getFirestore, collection, addDoc, getDocs, doc, getDoc } = require('firebase/firestore');
-const jwt = require('jsonwebtoken');  // Importar jsonwebtoken para generar el token
-const EmailManager = require('./EmailManager'); // Importa el EmailManager para enviar correos
-const { Storage } = require('@google-cloud/storage'); // Importa la librería de Google Cloud Storage
-const path = require('path'); // Importa path para manejar rutas de archivos
+import { db } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
+import { collection, addDoc, getDocs, doc, getDoc } from 'firebase/firestore';
+import jwt from 'jsonwebtoken';  // Importar jsonwebtoken para generar el token
+import EmailManager from './EmailManager.js'; // Importa el EmailManager para enviar correos
+import { Storage } from '@google-cloud/storage'; // Importa la librería de Google Cloud Storage
+import path from 'path'; // Importa path para manejar rutas de archivos
 
 // Clase para gestionar las invitaciones
 class InvitacionesManager {
     constructor() {
-        // Inicializa Firestore
-        this.db = getFirestore();
         this.collectionName = 'invitaciones'; // Nombre de la colección en Firestore
 
         // Inicializa Google Cloud Storage
         this.storage = new Storage({
             projectId: process.env.GCLOUD_PROJECT_ID, // ID de tu proyecto en Google Cloud
-            keyFilename: path.join(__dirname, '..', 'path-to-your-service-account-file.json') // Ruta al archivo de credenciales
+            keyFilename: path.join(path.resolve(), 'path-to-your-service-account-file.json') // Ruta al archivo de credenciales
         });
         this.bucketName = process.env.GCLOUD_STORAGE_BUCKET; // Nombre del bucket
     }
@@ -34,7 +33,7 @@ class InvitacionesManager {
         const token = this.generarTokenInvitacion(data.correo);
 
         try {
-            const nuevaInvitacion = await addDoc(collection(this.db, this.collectionName), { ...data, archivoUrls, token });
+            const nuevaInvitacion = await addDoc(collection(db, this.collectionName), { ...data, archivoUrls, token });
             await EmailManager.enviarCorreo(data.correo, data.asunto, data.mensaje);
             return { id: nuevaInvitacion.id, ...data, archivoUrls, token };  // Incluimos el token en la respuesta
         } catch (error) {
@@ -50,7 +49,7 @@ class InvitacionesManager {
         };
 
         // Generamos el token con el payload, la clave secreta y un tiempo de expiración
-        const token = jwt.sign(payload, 'secreto_del_token', { expiresIn: '1h' });  // Token con expiración de 1 hora
+        const token = jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });  // Token con expiración de 1 hora
         return token;
     }
 
@@ -78,7 +77,7 @@ class InvitacionesManager {
     // Función para listar todas las invitaciones
     async listarInvitaciones() {
         try {
-            const snapshot = await getDocs(collection(this.db, this.collectionName));
+            const snapshot = await getDocs(collection(db, this.collectionName));
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             throw new Error('Error al listar las invitaciones: ' + error.message);
@@ -88,7 +87,7 @@ class InvitacionesManager {
     // Función para obtener detalles de una invitación específica
     async obtenerInvitacionPorId(id) {
         try {
-            const docRef = doc(this.db, this.collectionName, id);
+            const docRef = doc(db, this.collectionName, id);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 return { id: docSnap.id, ...docSnap.data() };
@@ -125,5 +124,4 @@ class InvitacionesManager {
     }
 }
 
-// Exporta una instancia de la clase InvitacionesManager
-module.exports = new InvitacionesManager();
+export default new InvitacionesManager();

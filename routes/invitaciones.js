@@ -1,12 +1,15 @@
-// routes/invitaciones.js
+import express from 'express';
+import multer from 'multer';
+import InvitacionesManager from '../manager/InvitacionesManager.js';
+import EmailManager from '../manager/EmailManager.js'; // Importar EmailManager
+import authenticateUser from '../middleware/authenticateUser.js'; // Middleware para autenticar usuarios
+import verifyAdmin from '../middleware/verifyAdmin.js'; // Middleware para verificar si el usuario es administrador
 
-const express = require('express');
+// Configuración de Multer para manejar la carga de archivos
+const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
+const upload = multer({ storage });
+
 const router = express.Router();
-const upload = require('../middleware/upload'); // Middleware para subir archivos
-const InvitacionesManager = require('../manager/InvitacionesManager');
-const EmailManager = require('../manager/EmailManager'); // Importar EmailManager
-const authenticateUser = require('../middleware/authenticateUser'); // Middleware para autenticar usuarios
-const verifyAdmin = require('../middleware/verifyAdmin'); // Middleware para verificar si el usuario es administrador
 
 // Ruta para crear una nueva invitación
 router.post('/', authenticateUser, verifyAdmin, upload.array('archivos', 10), async (req, res) => { // Permitir hasta 10 archivos
@@ -60,4 +63,4 @@ router.get('/:id', authenticateUser, async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

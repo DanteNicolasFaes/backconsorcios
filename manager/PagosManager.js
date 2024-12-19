@@ -1,6 +1,6 @@
-const { ref, uploadBytesResumable, getDownloadURL } = require('firebase/storage'); // Importar funciones de Storage
-const { db, storage } = require('../firebaseConfig'); // Asumiendo que tienes el config de Firebase
-const { collection, addDoc, getDocs, doc, getDoc, deleteDoc } = require('firebase/firestore');
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'; // Importar funciones de Storage
+import { db, storage } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
+import { collection, addDoc, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 
 class PagosManager {
     // Registrar un pago y subir el archivo
@@ -12,7 +12,7 @@ class PagosManager {
 
         try {
             // Subir archivo a Firebase Storage
-            const archivoRef = ref(storage, `pagos/${archivo.filename}`);
+            const archivoRef = ref(storage, `pagos/${archivo.originalname}`);
             const uploadTask = uploadBytesResumable(archivoRef, archivo.buffer);
 
             // Esperar a que el archivo se suba y obtener la URL
@@ -100,4 +100,4 @@ class PagosManager {
     }
 }
 
-module.exports = PagosManager;
+export default PagosManager;

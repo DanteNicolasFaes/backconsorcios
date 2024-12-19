@@ -1,13 +1,5 @@
-// /middleware/uploads.js
-const multer = require('multer');
-const admin = require('firebase-admin');
-
-// Inicializar Firebase Admin SDK si aún no está inicializado
-if (!admin.apps.length) {
-    admin.initializeApp();
-}
-
-const storage = admin.storage().bucket();  // Acceder al bucket de Firebase Storage
+import multer from 'multer';
+import { storage } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
 
 // Configuración de multer para almacenar archivos en un almacenamiento temporal
 const upload = multer({
@@ -56,4 +48,4 @@ const uploadAndStoreUrls = async (req, res, next) => {
     }
 };
 
-module.exports = { upload, uploadAndStoreUrls };
+export { upload, uploadAndStoreUrls };

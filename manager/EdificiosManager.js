@@ -1,10 +1,10 @@
-const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore');
-const { enviarNotificacionEdificio } = require('../services/mailer'); // Importar la función para enviar correos
-const UsuariosManager = require('./UsuariosManager'); // Importar UsuariosManager para obtener el email del administrador
+import { db } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
+import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { enviarNotificacionEdificio } from '../services/mailer.js'; // Importar la función para enviar correos
+import UsuariosManager from './UsuariosManager.js'; // Importar UsuariosManager para obtener el email del administrador
 
 class EdificiosManager {
     constructor() {
-        this.db = getFirestore();
         this.collectionName = process.env.FIREBASE_EDIFICIOS_COLLECTION || 'edificios'; // Nombre de la colección en Firestore
     }
 
@@ -23,7 +23,7 @@ class EdificiosManager {
 
         try {
             // Crear el edificio en Firestore
-            const nuevoEdificio = await addDoc(collection(this.db, this.collectionName), data);
+            const nuevoEdificio = await addDoc(collection(db, this.collectionName), data);
 
             // Llamar a la función asíncrona para enviar notificación al administrador
             this.enviarNotificacionAdministrador(nuevoEdificio.id, data);
@@ -49,7 +49,7 @@ class EdificiosManager {
     // Función para obtener todos los edificios
     async obtenerEdificios() {
         try {
-            const edificiosSnapshot = await getDocs(collection(this.db, this.collectionName));
+            const edificiosSnapshot = await getDocs(collection(db, this.collectionName));
             return edificiosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             throw new Error('Error al obtener los edificios desde Firestore: ' + error.message);
@@ -59,7 +59,7 @@ class EdificiosManager {
     // Función para obtener un edificio por su ID
     async obtenerEdificioPorId(id) {
         try {
-            const edificioDoc = await getDoc(doc(this.db, this.collectionName, id));
+            const edificioDoc = await getDoc(doc(db, this.collectionName, id));
             if (!edificioDoc.exists()) {
                 return { mensaje: 'Edificio no encontrado en Firestore' };
             }
@@ -77,7 +77,7 @@ class EdificiosManager {
         }
 
         try {
-            await updateDoc(doc(this.db, this.collectionName, id), data);
+            await updateDoc(doc(db, this.collectionName, id), data);
             return { id, ...data };
         } catch (error) {
             throw new Error('Error al actualizar el edificio en Firestore: ' + error.message);
@@ -87,7 +87,7 @@ class EdificiosManager {
     // Función para eliminar un edificio
     async eliminarEdificio(id) {
         try {
-            await deleteDoc(doc(this.db, this.collectionName, id));
+            await deleteDoc(doc(db, this.collectionName, id));
             return { mensaje: 'Edificio eliminado de Firestore' };
         } catch (error) {
             throw new Error('Error al eliminar el edificio en Firestore: ' + error.message);
@@ -95,4 +95,4 @@ class EdificiosManager {
     }
 }
 
-module.exports = new EdificiosManager();
+export default new EdificiosManager();

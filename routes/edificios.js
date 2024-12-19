@@ -1,27 +1,21 @@
-const express = require('express');
-const router = express.Router();
-const EdificiosManager = require('../manager/EdificiosManager');
-const authenticateUser = require('../middleware/authenticateUser'); // Middleware para autenticación
-const verifyAdmin = require('../middleware/verifyAdmin'); // Middleware para verificar si es administrador
-const multer = require('multer');
+import express from 'express';
+import multer from 'multer';
+import EdificiosManager from '../manager/EdificiosManager.js';
+import authenticateUser from '../middleware/authenticateUser.js'; // Middleware para autenticación
+import verifyAdmin from '../middleware/verifyAdmin.js'; // Middleware para verificar si es administrador
 
 // Configuración de Multer para manejar la carga de archivos
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Carpeta donde se guardarán los documentos
-    },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`); // Nombre del archivo
-    }
-});
+const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
 const upload = multer({ storage });
+
+const router = express.Router();
 
 // Ruta para crear un nuevo edificio
 router.post('/', authenticateUser, verifyAdmin, upload.array('documentos', 10), async (req, res) => {
     try {
         const edificioData = { 
             ...req.body, 
-            documentos: req.files ? req.files.map(file => file.path) : [] // Si hay archivos, se agregan sus rutas
+            documentos: req.files ? req.files.map(file => file.buffer) : [] // Si hay archivos, se agregan sus buffers
         };
         const nuevoEdificio = await EdificiosManager.crearEdificio(edificioData, true); // `true` asegura que solo admin accede
         res.status(201).json(nuevoEdificio);
@@ -58,7 +52,7 @@ router.put('/:id', authenticateUser, verifyAdmin, upload.array('documentos', 10)
     try {
         const edificioData = { ...req.body };
         if (req.files && req.files.length > 0) {
-            edificioData.documentos = req.files.map(file => file.path); // Actualizar con las rutas de archivos si existen
+            edificioData.documentos = req.files.map(file => file.buffer); // Actualizar con los buffers de archivos si existen
         }
         const edificioActualizado = await EdificiosManager.actualizarEdificio(req.params.id, edificioData);
         if (!edificioActualizado) {
@@ -83,4 +77,4 @@ router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

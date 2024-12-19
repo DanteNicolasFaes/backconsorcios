@@ -1,25 +1,17 @@
-// /routes/pagos.js
-const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const PagosManager = require('../manager/PagosManager');
-const path = require('path');
-const fs = require('fs');
+import express from 'express';
+import multer from 'multer';
+import PagosManager from '../manager/PagosManager.js';
+import authenticateUser from '../middleware/authenticateUser.js';
+import verifyAdmin from '../middleware/verifyAdmin.js';
 
 // Configuración de Multer para manejo de archivos
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, './uploads'); // Carpeta donde se guardarán los archivos
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname)); // Usar timestamp como nombre de archivo
-    }
-});
-
+const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
 const upload = multer({ storage });
 
+const router = express.Router();
+
 // Ruta para registrar un nuevo pago
-router.post('/registrar', upload.single('archivo'), async (req, res) => {
+router.post('/registrar', authenticateUser, verifyAdmin, upload.single('archivo'), async (req, res) => {
     const { monto, fechaPago, estado, idUnidadFuncional, descripcion } = req.body;
     const archivo = req.file; // El archivo subido
 
@@ -34,7 +26,7 @@ router.post('/registrar', upload.single('archivo'), async (req, res) => {
 
     try {
         // Llamar al método de PagosManager para registrar el pago
-        const nuevoPago = await PagosManager.registrarPago(pago, archivo, req.user.esAdmin);
+        const nuevoPago = await PagosManager.registrarPago(pago, archivo, req.user.isAdmin);
 
         res.status(201).json({
             message: 'Pago registrado exitosamente',
@@ -48,7 +40,7 @@ router.post('/registrar', upload.single('archivo'), async (req, res) => {
 });
 
 // Ruta para listar todos los pagos
-router.get('/', async (req, res) => {
+router.get('/', authenticateUser, async (req, res) => {
     try {
         const pagos = await PagosManager.listarPagos();
         res.status(200).json(pagos); // Enviar la lista de pagos
@@ -60,7 +52,7 @@ router.get('/', async (req, res) => {
 });
 
 // Ruta para obtener un pago por ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateUser, async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -74,11 +66,11 @@ router.get('/:id', async (req, res) => {
 });
 
 // Ruta para eliminar un pago
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     const { id } = req.params;
 
     try {
-        const respuesta = await PagosManager.eliminarPago(id, req.user.esAdmin);
+        const respuesta = await PagosManager.eliminarPago(id, req.user.isAdmin);
         res.status(200).json(respuesta); // Enviar mensaje de éxito
     } catch (error) {
         res.status(500).json({
@@ -88,7 +80,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Ruta para actualizar un pago
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     const { id } = req.params;
     const { monto, fechaPago, estado, descripcion, archivo } = req.body;
 
@@ -101,7 +93,7 @@ router.put('/:id', async (req, res) => {
     };
 
     try {
-        const pagoActualizado = await PagosManager.actualizarPago(id, datosActualizados, req.user.esAdmin);
+        const pagoActualizado = await PagosManager.actualizarPago(id, datosActualizados, req.user.isAdmin);
         res.status(200).json({
             message: 'Pago actualizado exitosamente',
             pago: pagoActualizado
@@ -113,4 +105,4 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-module.exports = router; // Exportar las rutas de pagos
+export default router;

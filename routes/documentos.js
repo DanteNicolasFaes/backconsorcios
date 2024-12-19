@@ -1,19 +1,20 @@
-const express = require('express');
+import express from 'express';
+import DocumentosManager from '../manager/DocumentosManager.js';
+import authenticateUser from '../middleware/authenticateUser.js';
+import verifyAdmin from '../middleware/verifyAdmin.js';
+import { upload, uploadAndStoreUrls } from '../middleware/uploads.js'; // Importar middleware de carga de archivos
+
 const router = express.Router();
-const DocumentosManager = require('../manager/DocumentosManager');
-const authenticateUser = require('../middleware/authenticateUser');
-const verifyAdmin = require('../middleware/verifyAdmin');
-const upload = require('../middleware/uploads'); // Importar middleware de carga de archivos
 
 // Ruta para subir un documento (ahora soporta múltiples archivos)
-router.post('/', authenticateUser, verifyAdmin, upload.array('files'), async (req, res) => {
+router.post('/', authenticateUser, verifyAdmin, upload, uploadAndStoreUrls, async (req, res) => {
     try {
-        if (!req.files || req.files.length === 0) {
+        if (!req.fileUrls || req.fileUrls.length === 0) {
             // Error explícito si no se suben archivos
             return res.status(400).json({ message: 'Se deben proporcionar archivos para subir el documento.' });
         }
 
-        const archivos = req.files;  // Archivos subidos
+        const archivos = req.fileUrls;  // URLs de los archivos subidos
         const documento = req.body;  // Los demás datos del documento (categoría, fecha, descripción)
 
         // Llamar al método para subir los documentos
@@ -49,14 +50,9 @@ router.get('/:id', authenticateUser, async (req, res) => {
 });
 
 // Ruta para actualizar un documento (soporta múltiples archivos)
-router.put('/:id', authenticateUser, verifyAdmin, upload.array('files'), async (req, res) => {
+router.put('/:id', authenticateUser, verifyAdmin, upload, uploadAndStoreUrls, async (req, res) => {
     try {
-        if (!req.files || req.files.length === 0) {
-            // Error explícito si no se suben archivos
-            return res.status(400).json({ message: 'Se deben proporcionar archivos para actualizar el documento.' });
-        }
-
-        const archivos = req.files;  // Nuevos archivos subidos
+        const archivos = req.fileUrls;  // Nuevas URLs de los archivos subidos
         const datosActualizados = req.body;  // Otros datos a actualizar
 
         const resultado = await DocumentosManager.actualizarDocumento(req.params.id, datosActualizados, archivos);
@@ -78,4 +74,4 @@ router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

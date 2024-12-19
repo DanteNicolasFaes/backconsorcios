@@ -1,8 +1,8 @@
-const { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } = require('firebase/firestore');
-const db = getFirestore();
+import { db } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
+import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 // Función para crear un nuevo encargado
-const crearEncargado = async (encargadoData) => {
+export const crearEncargado = async (encargadoData) => {
     try {
         const nuevoEncargado = {
             nombre: encargadoData.nombre,
@@ -23,7 +23,7 @@ const crearEncargado = async (encargadoData) => {
 };
 
 // Función para obtener todos los encargados
-const obtenerEncargados = async () => {
+export const obtenerEncargados = async () => {
     try {
         const querySnapshot = await getDocs(collection(db, 'encargados'));
         const encargados = [];
@@ -38,7 +38,7 @@ const obtenerEncargados = async () => {
 };
 
 // Función para obtener un encargado por su ID
-const obtenerEncargadoPorId = async (id) => {
+export const obtenerEncargadoPorId = async (id) => {
     try {
         const docRef = doc(db, 'encargados', id);
         const docSnap = await getDoc(docRef);
@@ -54,7 +54,7 @@ const obtenerEncargadoPorId = async (id) => {
 };
 
 // Función para actualizar un encargado
-const actualizarEncargado = async (id, encargadoData) => {
+export const actualizarEncargado = async (id, encargadoData) => {
     try {
         const docRef = doc(db, 'encargados', id);
         await updateDoc(docRef, {
@@ -73,7 +73,7 @@ const actualizarEncargado = async (id, encargadoData) => {
 };
 
 // Función para eliminar un encargado
-const eliminarEncargado = async (id) => {
+export const eliminarEncargado = async (id) => {
     try {
         const docRef = doc(db, 'encargados', id);
         await deleteDoc(docRef);
@@ -82,12 +82,4 @@ const eliminarEncargado = async (id) => {
         console.error("Error al eliminar el encargado: ", error);
         throw new Error('No se pudo eliminar el encargado');
     }
-};
-
-module.exports = {
-    crearEncargado,
-    obtenerEncargados,
-    obtenerEncargadoPorId,
-    actualizarEncargado,
-    eliminarEncargado,
 };

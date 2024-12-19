@@ -1,21 +1,15 @@
-const express = require('express');
-const router = express.Router();
-const mailer = require('../services/mailer'); // Importar el servicio de correo
-const authenticateUser = require('../middleware/authenticateUser'); // Middleware para autenticar al usuario
-const verifyAdmin = require('../middleware/verifyAdmin'); // Middleware para verificar que el usuario sea administrador
-const multer = require('multer'); // Usamos multer para manejar la subida de archivos
-const fs = require('fs'); // Importar el módulo fs para eliminar archivos si es necesario
+import express from 'express';
+import multer from 'multer';
+import fs from 'fs';
+import EmailManager from '../manager/EmailManager.js'; // Importar el servicio de correo
+import authenticateUser from '../middleware/authenticateUser.js'; // Middleware para autenticar al usuario
+import verifyAdmin from '../middleware/verifyAdmin.js'; // Middleware para verificar que el usuario sea administrador
 
 // Configuración de Multer para manejar la carga de archivos
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Carpeta donde se guardarán los archivos
-    },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`); // Nombre del archivo
-    }
-});
+const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
 const upload = multer({ storage });
+
+const router = express.Router();
 
 // Ruta para enviar un correo electrónico
 router.post('/enviar', authenticateUser, verifyAdmin, upload.single('archivo'), async (req, res) => {
@@ -27,21 +21,11 @@ router.post('/enviar', authenticateUser, verifyAdmin, upload.single('archivo'), 
     }
 
     // Si hay un archivo adjunto, se puede usar req.file
-    const archivoAdjunto = req.file ? req.file.path : null; // Guarda la ruta del archivo, si existe
+    const archivoAdjunto = req.file ? req.file.buffer : null; // Guarda el buffer del archivo, si existe
 
     try {
-        // Enviar correo utilizando mailer.js
-        const resultado = await mailer.enviarNotificacionPago(destinatario, {
-            monto: 'Monto ejemplo',
-            fechaPago: 'Fecha ejemplo',
-            estado: 'Estado ejemplo',
-            descripcion: 'Descripción ejemplo'
-        });
-        
-        // Si se subió un archivo y no es necesario después del envío, eliminamos el archivo
-        if (archivoAdjunto) {
-            fs.unlinkSync(archivoAdjunto); // Eliminar el archivo del servidor
-        }
+        // Enviar correo utilizando EmailManager
+        const resultado = await EmailManager.enviarCorreo(destinatario, asunto, mensaje, archivoAdjunto);
         
         return res.status(200).json(resultado); // Respuesta exitosa
     } catch (error) {
@@ -51,4 +35,4 @@ router.post('/enviar', authenticateUser, verifyAdmin, upload.single('archivo'), 
     }
 });
 
-module.exports = router; // Exportar el router para usarlo en el servidor
+export default router; // Exportar el router para usarlo en el servidor

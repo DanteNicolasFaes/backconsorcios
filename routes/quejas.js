@@ -1,18 +1,11 @@
-// /routes/quejas.js
-const express = require('express');  // Importar express para crear la ruta
-const multer = require('multer');  // Importar Multer para el manejo de archivos
-const QuejasManager = require('../manager/QuejasManager');  // Importar el gestor de quejas
-const { authenticateUser } = require('../middleware/authenticate');  // Middleware para autenticar usuarios
+import express from 'express';  // Importar express para crear la ruta
+import multer from 'multer';  // Importar Multer para el manejo de archivos
+import QuejasManager from '../manager/QuejasManager.js';  // Importar el gestor de quejas
+import authenticateUser from '../middleware/authenticateUser.js';  // Middleware para autenticar usuarios
+import verifyAdmin from '../middleware/verifyAdmin.js';  // Middleware para verificar si el usuario es administrador
 
 // Configuración de Multer para permitir múltiples archivos
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');  // Carpeta donde se guardarán los archivos
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname);  // Nombre del archivo
-    }
-});
+const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
 const upload = multer({ storage });  // Inicializar Multer con la configuración de almacenamiento
 
 const router = express.Router();  // Crear el router de Express
@@ -22,11 +15,11 @@ router.post('/', authenticateUser, upload.array('documentos', 10), async (req, r
     try {
         // Extraemos los valores necesarios del cuerpo de la solicitud
         const { contenido, unidadFuncionalId } = req.body;
-        const archivo = req.files.map(file => file.path);  // Los archivos se guardan en `req.files`
+        const archivos = req.files;  // Los archivos se guardan en `req.files`
         const esPropietario = req.user.role === 'propietario' || req.user.role === 'inquilino';  // Verificamos que el usuario sea propietario o inquilino
 
         // Llamamos a `crearQueja` del `QuejasManager`, pasándole los datos necesarios
-        const queja = await QuejasManager.crearQueja({ contenido }, archivo, unidadFuncionalId, esPropietario);
+        const queja = await QuejasManager.crearQueja({ contenido }, archivos, unidadFuncionalId, esPropietario);
 
         res.status(201).json({ message: 'Queja creada con éxito', queja });  // Enviamos una respuesta exitosa con la queja creada
     } catch (error) {
@@ -35,12 +28,12 @@ router.post('/', authenticateUser, upload.array('documentos', 10), async (req, r
 });
 
 // Ruta para responder a una queja (solo para administradores)
-router.put('/:id/responder', authenticateUser, async (req, res) => {
+router.put('/:id/responder', authenticateUser, verifyAdmin, async (req, res) => {
     const { respuesta } = req.body;
     const { id } = req.params;
 
     try {
-        const resultado = await QuejasManager.responderQueja(id, respuesta);
+        const resultado = await QuejasManager.responderQueja(id, respuesta, req.user.isAdmin);
         res.status(200).json({ message: resultado.message });
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -48,15 +41,35 @@ router.put('/:id/responder', authenticateUser, async (req, res) => {
 });
 
 // Ruta para eliminar una queja (solo para administradores)
-router.delete('/:id', authenticateUser, async (req, res) => {
+router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
     const { id } = req.params;
 
     try {
-        const resultado = await QuejasManager.eliminarQueja(id);
+        const resultado = await QuejasManager.eliminarQueja(id, req.user.isAdmin);
         res.status(200).json({ message: resultado.message });
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 });
 
-module.exports = router;  // Exportamos el router para usarlo en el archivo principal (server.js)
+// Ruta para obtener todas las quejas
+router.get('/', authenticateUser, async (req, res) => {
+    try {
+        const quejas = await QuejasManager.obtenerQuejas();
+        res.status(200).json(quejas);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Ruta para obtener una queja específica por ID
+router.get('/:id', authenticateUser, async (req, res) => {
+    try {
+        const queja = await QuejasManager.obtenerQuejaPorId(req.params.id);
+        res.status(200).json(queja);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+export default router;  // Exportamos el router para usarlo en el archivo principal (server.js)

@@ -1,8 +1,9 @@
-const express = require('express');
+import express from 'express';
+import ExpensasManager from '../manager/ExpensasManager.js';
+import authenticateUser from '../middleware/authenticateUser.js';
+import verifyAdmin from '../middleware/verifyAdmin.js';
+
 const router = express.Router();
-const ExpensasManager = require('../manager/ExpensasManager');
-const authenticateUser = require('../middleware/authenticateUser');
-const verifyAdmin = require('../middleware/verifyAdmin');
 
 // Ruta para obtener todas las expensas
 router.get('/', authenticateUser, async (req, res) => {
@@ -89,5 +90,4 @@ router.post('/enviar/:id', authenticateUser, verifyAdmin, async (req, res) => {
     }
 });
 
-
-module.exports = router;
+export default router;

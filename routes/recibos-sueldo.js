@@ -1,18 +1,11 @@
-const express = require('express');
-const multer = require('multer');
-const { crearReciboSueldo, obtenerRecibosPorEncargadoId } = require('../manager/RecibosSueldoManager');
-const authenticateUser = require('../middleware/authenticateUser');
-const verifyAdmin = require('../middleware/verifyAdmin');
+import express from 'express';
+import multer from 'multer';
+import { crearReciboSueldo, obtenerRecibosPorEncargadoId } from '../manager/RecibosSueldoManager.js';
+import authenticateUser from '../middleware/authenticateUser.js';
+import verifyAdmin from '../middleware/verifyAdmin.js';
 
 // Configuración de Multer para manejar la carga de archivos
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/recibos'); // Carpeta donde se guardarán los recibos
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname); // Nombre único para cada archivo
-    }
-});
+const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
 const upload = multer({ storage });
 
 // Middleware de validación para los datos del recibo de sueldo
@@ -54,4 +47,4 @@ router.get('/:encargadoId', authenticateUser, verifyAdmin, async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

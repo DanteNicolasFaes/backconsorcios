@@ -1,16 +1,8 @@
-require('dotenv').config(); // Cargar las variables de entorno desde el archivo .env
-const mailer = require('../services/mailer'); // Importar el servicio de correo
-const admin = require('firebase-admin'); // Importar Firebase Admin
+import dotenv from 'dotenv';
+import { enviarNotificacionPago } from '../services/mailer.js'; // Importar el servicio de correo
+import { db } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
 
-// Inicializa Firebase Admin con las credenciales adecuadas
-if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.applicationDefault(), // O usa admin.credential.cert(serviceAccount) si tienes un archivo de clave
-        databaseURL: process.env.FIREBASE_DATABASE_URL, // Asegúrate de tener esta variable en tu .env
-    });
-}
-
-const db = admin.firestore(); // Obtener la referencia a Firestore
+dotenv.config(); // Cargar las variables de entorno desde el archivo .env
 
 class EmailManager {
     // Método estático para enviar correos electrónicos
@@ -32,7 +24,7 @@ class EmailManager {
 
         try {
             // Enviar el correo utilizando el servicio mailer
-            await mailer.enviarNotificacionPago(destinatario, {
+            await enviarNotificacionPago(destinatario, {
                 monto: 'Monto ejemplo',
                 fechaPago: 'Fecha ejemplo',
                 estado: 'Estado ejemplo',
@@ -71,4 +63,4 @@ class EmailManager {
     }
 }
 
-module.exports = EmailManager; // Exportar la clase para su uso en otros módulos
+export default EmailManager; // Exportar la clase para su uso en otros módulos

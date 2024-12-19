@@ -1,7 +1,6 @@
-const { getFirestore, collection, addDoc, getDocs, query, where } = require('firebase/firestore');
-const { getStorage, ref, uploadBytesResumable, getDownloadURL } = require('firebase/storage');
-const db = getFirestore();
-const storage = getStorage();
+import { db, storage } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
+import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 // Función para subir el archivo y obtener la URL
 const subirArchivo = async (file) => {
@@ -20,7 +19,7 @@ const subirArchivo = async (file) => {
 };
 
 // Función para crear el recibo de sueldo
-const crearReciboSueldo = async (encargadoId, reciboData, file) => {
+export const crearReciboSueldo = async (encargadoId, reciboData, file) => {
     try {
         const fileURL = await subirArchivo(file); // Subir archivo y obtener URL
 
@@ -43,7 +42,7 @@ const crearReciboSueldo = async (encargadoId, reciboData, file) => {
 };
 
 // Función para obtener los recibos de sueldo de un encargado
-const obtenerRecibosPorEncargadoId = async (encargadoId) => {
+export const obtenerRecibosPorEncargadoId = async (encargadoId) => {
     try {
         const recibosRef = collection(db, 'recibosSueldo');
         const q = query(recibosRef, where('encargadoId', '==', encargadoId));
@@ -55,9 +54,4 @@ const obtenerRecibosPorEncargadoId = async (encargadoId) => {
         console.error('Error al obtener los recibos de sueldo:', error);
         throw new Error('No se pudo obtener los recibos de sueldo');
     }
-};
-
-module.exports = {
-    crearReciboSueldo,
-    obtenerRecibosPorEncargadoId,
 };

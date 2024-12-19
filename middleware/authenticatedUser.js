@@ -1,6 +1,7 @@
-// /middleware/authenticateUser.js
-const jwt = require('jsonwebtoken');
-require('dotenv').config(); // Cargar variables de entorno desde un archivo .env
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config(); // Cargar variables de entorno desde un archivo .env
 
 const authenticateUser = (req, res, next) => {
     // Obtiene el token de la cabecera 'Authorization'
@@ -25,4 +26,4 @@ const authenticateUser = (req, res, next) => {
     }
 };
 
-module.exports = authenticateUser;
+export default authenticateUser;
