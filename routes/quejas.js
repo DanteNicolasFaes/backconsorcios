@@ -1,14 +1,14 @@
-import express from 'express';  // Importar express para crear la ruta
-import multer from 'multer';  // Importar Multer para el manejo de archivos
-import QuejasManager from '../manager/QuejasManager.js';  // Importar el gestor de quejas
-import authenticateUser from '../middleware/authenticateUser.js';  // Middleware para autenticar usuarios
-import verifyAdmin from '../middleware/verifyAdmin.js';  // Middleware para verificar si el usuario es administrador
+import express from 'express';
+import multer from 'multer';
+import QuejasManager from '../manager/QuejasManager.js';
+import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
+import verifyAdmin from '../middleware/verifyAdmin.js';
 
-// Configuración de Multer para permitir múltiples archivos
+// Configuración de Multer para manejo de archivos
 const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
-const upload = multer({ storage });  // Inicializar Multer con la configuración de almacenamiento
+const upload = multer({ storage });
 
-const router = express.Router();  // Crear el router de Express
+const router = express.Router();
 
 // Ruta para crear una nueva queja
 router.post('/', authenticateUser, upload.array('documentos', 10), async (req, res) => {
@@ -72,4 +72,4 @@ router.get('/:id', authenticateUser, async (req, res) => {
     }
 });
 
-export default router;  // Exportamos el router para usarlo en el archivo principal (server.js)
+export default router;
