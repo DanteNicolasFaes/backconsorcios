@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { enviarNotificacionPago } from '../services/mailer.js'; // Importar el servicio de correo
+import { enviarNotificacionPago, enviarCorreo } from '../services/mailer.js'; // Importar el servicio de correo
 import { db } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
 
 dotenv.config(); // Cargar las variables de entorno desde el archivo .env
@@ -24,12 +24,7 @@ class EmailManager {
 
         try {
             // Enviar el correo utilizando el servicio mailer
-            await enviarNotificacionPago(destinatario, {
-                monto: 'Monto ejemplo',
-                fechaPago: 'Fecha ejemplo',
-                estado: 'Estado ejemplo',
-                descripcion: 'Descripción ejemplo'
-            });
+            await enviarCorreo(destinatario, asunto, mensaje);
 
             await this.registrarCorreoEnHistorial(destinatario, asunto); // Registrar el correo enviado
             return { mensaje: 'Correo enviado con éxito' };
@@ -37,6 +32,11 @@ class EmailManager {
             console.error('Error al enviar el correo: ', error);
             throw new Error('Error al enviar el correo: ' + error.message); // Mejorar el mensaje de error
         }
+    }
+
+    // Método para enviar una notificación de pago
+    static async enviarNotificacionPago(destinatario, asunto, mensaje) {
+        await enviarNotificacionPago(destinatario, asunto, mensaje);
     }
 
     // Método privado para validar el correo electrónico

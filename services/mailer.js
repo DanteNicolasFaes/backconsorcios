@@ -34,3 +34,8 @@ export const enviarCorreo = async (destinatario, asunto, mensaje) => {
 export const enviarNotificacionEdificio = async (destinatario, asunto, mensaje) => {
     await enviarCorreo(destinatario, asunto, mensaje);
 };
+
+// Función para enviar notificaciones relacionadas con pagos
+export const enviarNotificacionPago = async (destinatario, asunto, mensaje) => {
+    await enviarCorreo(destinatario, asunto, mensaje);
+};
