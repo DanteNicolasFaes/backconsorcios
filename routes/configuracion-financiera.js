@@ -1,6 +1,6 @@
 import express from 'express';
 import { obtenerConfiguracion, crearOActualizarConfiguracion } from '../manager/ConfiguracionFinancieraManager.js';
-import authenticateUser from '../middleware/authenticateUser.js';
+import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
 import verifyAdmin from '../middleware/verifyAdmin.js';
 
 const router = express.Router();
