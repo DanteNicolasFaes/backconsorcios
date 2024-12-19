@@ -1,7 +1,7 @@
 import express from 'express';
 import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
 import verifyAdmin from '../middleware/verifyAdmin.js';
-import EncargadoManager from '../manager/EncargadoManager.js';
+import EncargadoManager from '../manager/EncargadoManager.js'; // Importar EncargadoManager
 
 const router = express.Router();
 

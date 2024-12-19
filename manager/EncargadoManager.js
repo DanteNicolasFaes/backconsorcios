@@ -1,85 +1,79 @@
-import { db } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
+import { db } from '../firebaseConfig.js';
 import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
-// Función para crear un nuevo encargado
-export const crearEncargado = async (encargadoData) => {
-    try {
-        const nuevoEncargado = {
-            nombre: encargadoData.nombre,
-            fechaNacimiento: encargadoData.fechaNacimiento,
-            cuil: encargadoData.cuil,
-            cargo: encargadoData.cargo,
-            categoriaEncargado: encargadoData.categoriaEncargado,
-            antiguedad: encargadoData.antiguedad, // Años de antigüedad o fecha de inicio de actividades
-            recibosSueldo: [], // Para almacenar los recibos de sueldo relacionados
+class EncargadoManager {
+    // Estructura base del encargado
+    static estructurarEncargado(datos) {
+        return {
+            nombre: datos.nombre || 'Sin nombre',
+            fechaNacimiento: datos.fechaNacimiento || null,
+            cuil: datos.cuil || 'Sin CUIL',
+            cargo: datos.cargo || 'Sin asignar',
+            categoriaEncargado: datos.categoriaEncargado || 'Sin categoría',
+            antiguedad: datos.antiguedad || 0,
+            recibosSueldo: datos.recibosSueldo || [],
         };
-        const docRef = await addDoc(collection(db, 'encargados'), nuevoEncargado);
-        console.log("Encargado creado con ID: ", docRef.id);
-        return docRef.id; // Devolvemos el ID del encargado recién creado
-    } catch (error) {
-        console.error("Error al crear el encargado: ", error);
-        throw new Error('No se pudo crear el encargado');
     }
-};
 
-// Función para obtener todos los encargados
-export const obtenerEncargados = async () => {
-    try {
-        const querySnapshot = await getDocs(collection(db, 'encargados'));
-        const encargados = [];
-        querySnapshot.forEach((doc) => {
-            encargados.push({ id: doc.id, ...doc.data() });
-        });
-        return encargados;
-    } catch (error) {
-        console.error("Error al obtener los encargados: ", error);
-        throw new Error('No se pudo obtener la lista de encargados');
-    }
-};
-
-// Función para obtener un encargado por su ID
-export const obtenerEncargadoPorId = async (id) => {
-    try {
-        const docRef = doc(db, 'encargados', id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            return { id: docSnap.id, ...docSnap.data() };
-        } else {
-            throw new Error('Encargado no encontrado');
+    // Crear un nuevo encargado
+    async crearEncargado(encargadoData) {
+        try {
+            const nuevoEncargado = EncargadoManager.estructurarEncargado(encargadoData);
+            const docRef = await addDoc(collection(db, 'encargados'), nuevoEncargado);
+            return { id: docRef.id, ...nuevoEncargado };
+        } catch (error) {
+            console.error('Error al crear el encargado:', error);
+            throw new Error('No se pudo crear el encargado');
         }
-    } catch (error) {
-        console.error("Error al obtener el encargado: ", error);
-        throw new Error('No se pudo obtener el encargado');
     }
-};
 
-// Función para actualizar un encargado
-export const actualizarEncargado = async (id, encargadoData) => {
-    try {
-        const docRef = doc(db, 'encargados', id);
-        await updateDoc(docRef, {
-            nombre: encargadoData.nombre,
-            fechaNacimiento: encargadoData.fechaNacimiento,
-            cuil: encargadoData.cuil,
-            cargo: encargadoData.cargo,
-            categoriaEncargado: encargadoData.categoriaEncargado,
-            antiguedad: encargadoData.antiguedad, // Años de antigüedad o fecha de inicio de actividades
-        });
-        console.log("Encargado actualizado con ID: ", id);
-    } catch (error) {
-        console.error("Error al actualizar el encargado: ", error);
-        throw new Error('No se pudo actualizar el encargado');
+    // Obtener todos los encargados
+    async obtenerEncargados() {
+        try {
+            const encargadosSnapshot = await getDocs(collection(db, 'encargados'));
+            return encargadosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error('Error al obtener los encargados:', error);
+            throw new Error('No se pudo obtener la lista de encargados');
+        }
     }
-};
 
-// Función para eliminar un encargado
-export const eliminarEncargado = async (id) => {
-    try {
-        const docRef = doc(db, 'encargados', id);
-        await deleteDoc(docRef);
-        console.log("Encargado eliminado con ID: ", id);
-    } catch (error) {
-        console.error("Error al eliminar el encargado: ", error);
-        throw new Error('No se pudo eliminar el encargado');
+    // Obtener un encargado por ID
+    async obtenerEncargadoPorId(id) {
+        try {
+            const encargadoDoc = await getDoc(doc(db, 'encargados', id));
+            if (!encargadoDoc.exists()) throw new Error('Encargado no encontrado');
+            return { id: encargadoDoc.id, ...encargadoDoc.data() };
+        } catch (error) {
+            console.error('Error al obtener el encargado:', error);
+            throw new Error('No se pudo obtener el encargado');
+        }
     }
-};
+
+    // Actualizar un encargado
+    async actualizarEncargado(id, encargadoData) {
+        try {
+            const encargadoRef = doc(db, 'encargados', id);
+            const datosActualizados = EncargadoManager.estructurarEncargado(encargadoData);
+            await updateDoc(encargadoRef, datosActualizados);
+            return { id, ...datosActualizados };
+        } catch (error) {
+            console.error('Error al actualizar el encargado:', error);
+            throw new Error('No se pudo actualizar el encargado');
+        }
+    }
+
+    // Eliminar un encargado
+    async eliminarEncargado(id) {
+        try {
+            const encargadoRef = doc(db, 'encargados', id);
+            await deleteDoc(encargadoRef);
+            return { mensaje: 'Encargado eliminado con éxito' };
+        } catch (error) {
+            console.error('Error al eliminar el encargado:', error);
+            throw new Error('No se pudo eliminar el encargado');
+        }
+    }
+}
+
+export default new EncargadoManager();
