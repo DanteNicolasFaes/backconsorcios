@@ -1,9 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import InvitacionesManager from '../manager/InvitacionesManager.js';
-import EmailManager from '../manager/EmailManager.js'; // Importar EmailManager
-import authenticateUser from '../middleware/authenticateUser.js'; // Middleware para autenticar usuarios
-import verifyAdmin from '../middleware/verifyAdmin.js'; // Middleware para verificar si el usuario es administrador
+import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
+import verifyAdmin from '../middleware/verifyAdmin.js';
 
 // Configuración de Multer para manejar la carga de archivos
 const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
