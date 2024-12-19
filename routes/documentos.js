@@ -1,8 +1,8 @@
 import express from 'express';
-import DocumentosManager from '../manager/DocumentosManager.js';
-import authenticateUser from '../middleware/authenticateUser.js';
+import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
 import verifyAdmin from '../middleware/verifyAdmin.js';
-import { upload, uploadAndStoreUrls } from '../middleware/uploads.js'; // Importar middleware de carga de archivos
+import { upload, uploadAndStoreUrls } from '../middleware/uploads.js';
+import DocumentosManager from '../manager/DocumentosManager.js';
 
 const router = express.Router();
 
