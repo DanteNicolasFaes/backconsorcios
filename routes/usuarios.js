@@ -2,7 +2,7 @@ import dotenv from 'dotenv'; // Cargar variables de entorno
 import express from 'express';
 import multer from 'multer'; // Importar multer
 import UsuariosManager from '../manager/UsuariosManager.js';
-import authenticateUser from '../middleware/authenticateUser.js'; // Middleware para autenticación
+import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
 import verifyAdmin from '../middleware/verifyAdmin.js'; // Middleware para verificar si es administrador
 
 dotenv.config(); // Cargar variables de entorno
