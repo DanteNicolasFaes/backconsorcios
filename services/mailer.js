@@ -1,44 +1,36 @@
-import nodemailer from 'nodemailer'; // Asegúrate de instalar nodemailer con npm
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
 
-// Configuración del transportador de correo
+dotenv.config(); // Cargar variables de entorno desde un archivo .env
+
+// Configuración del transportador de nodemailer
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // Por ejemplo, Gmail
+    service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER, // Tu correo electrónico
-        pass: process.env.EMAIL_PASS,  // Tu contraseña de correo
-    },
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
 });
 
-// Función para enviar notificación de pago
-export const enviarNotificacionPago = async (email, pago) => {
-    // Validación de datos de pago
-    if (!pago.monto || !pago.fechaPago || !pago.estado) {
-        throw new Error('Faltan datos del pago.');
-    }
-
-    // Opciones del correo
+// Función para enviar correos electrónicos
+export const enviarCorreo = async (destinatario, asunto, mensaje) => {
     const mailOptions = {
-        from: process.env.EMAIL_USER, // Remitente
-        to: email, // Destinatario
-        subject: 'Notificación de Pago',
-        html: `
-            <h3>Se ha registrado un nuevo pago:</h3>
-            <ul>
-                <li><strong>Monto:</strong> ${pago.monto}</li>
-                <li><strong>Fecha:</strong> ${pago.fechaPago}</li>
-                <li><strong>Estado:</strong> ${pago.estado}</li>
-                <li><strong>Descripción:</strong> ${pago.descripcion || 'N/A'}</li>
-            </ul>
-        `,
+        from: process.env.EMAIL_USER,
+        to: destinatario,
+        subject: asunto,
+        text: mensaje
     };
 
     try {
-        // Enviar el correo
         await transporter.sendMail(mailOptions);
         console.log('Correo enviado con éxito');
     } catch (error) {
-        // Capturar error
-        console.error('Error al enviar el correo:', error.message);
-        throw new Error(`No se pudo enviar el correo: ${error.message}`);
+        console.error('Error al enviar el correo:', error);
+        throw new Error('Error al enviar el correo');
     }
+};
+
+// Función para enviar notificaciones relacionadas con edificios
+export const enviarNotificacionEdificio = async (destinatario, asunto, mensaje) => {
+    await enviarCorreo(destinatario, asunto, mensaje);
 };
