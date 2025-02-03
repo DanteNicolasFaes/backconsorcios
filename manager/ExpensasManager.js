@@ -1,12 +1,24 @@
 import { db } from '../firebaseConfig.js';
 import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { obtenerConfiguracion, crearOActualizarConfiguracion } from './ConfiguracionFinancieraManager.js'; // Asegúrate de que el nombre del archivo sea correcto
+import { storage } from '../firebaseConfig.js'; // Importar configuración de almacenamiento
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // Métodos para subir y obtener URL de los archivos
 
 class ExpensasManager {
-    // Método para crear una nueva expensa
-    async crearExpensa(expensaData) {
-        const nuevaExpensa = await addDoc(collection(db, 'expensas'), expensaData);
-        return { id: nuevaExpensa.id, ...expensaData };
+    // Método para crear una nueva expensa con manejo de archivos
+    async crearExpensa(expensaData, archivo) {
+        let archivoUrl = null;
+        
+        // Si se sube un archivo, lo subimos a Firebase Storage
+        if (archivo) {
+            const archivoRef = ref(storage, `expensas/${archivo.originalname}`);
+            await uploadBytes(archivoRef, archivo.buffer); // Subir el archivo
+            archivoUrl = await getDownloadURL(archivoRef); // Obtener la URL del archivo subido
+        }
+
+        // Crear la nueva expensa
+        const nuevaExpensa = await addDoc(collection(db, 'expensas'), { ...expensaData, archivoUrl });
+        return { id: nuevaExpensa.id, ...expensaData, archivoUrl };
     }
 
     // Método para obtener todas las expensas
@@ -26,9 +38,19 @@ class ExpensasManager {
     }
 
     // Método para actualizar una expensa
-    async actualizarExpensa(expensaId, expensaData) {
+    async actualizarExpensa(expensaId, expensaData, archivo) {
         const expensaRef = doc(db, 'expensas', expensaId);
-        await updateDoc(expensaRef, expensaData);
+        
+        let archivoUrl = expensaData.archivoUrl;
+        // Si se sube un archivo nuevo, subimos el archivo a Firebase Storage
+        if (archivo) {
+            const archivoRef = ref(storage, `expensas/${archivo.originalname}`);
+            await uploadBytes(archivoRef, archivo.buffer);
+            archivoUrl = await getDownloadURL(archivoRef);
+        }
+
+        // Actualizar la expensa con los nuevos datos
+        await updateDoc(expensaRef, { ...expensaData, archivoUrl });
         const expensaActualizada = await getDoc(expensaRef);
         return { id: expensaActualizada.id, ...expensaActualizada.data() };
     }

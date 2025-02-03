@@ -18,10 +18,11 @@ const subirArchivo = async (file) => {
     }
 };
 
-// Función para crear el recibo de sueldo
-export const crearReciboSueldo = async (encargadoId, reciboData, file) => {
+// Función para crear el recibo de sueldo (puede manejar múltiples archivos)
+export const crearReciboSueldo = async (encargadoId, reciboData, files) => {
     try {
-        const fileURL = await subirArchivo(file); // Subir archivo y obtener URL
+        // Subir todos los archivos y obtener sus URLs
+        const fileURLs = files ? await Promise.all(files.map(file => subirArchivo(file))) : [];
 
         const nuevoRecibo = {
             encargadoId,
@@ -29,7 +30,7 @@ export const crearReciboSueldo = async (encargadoId, reciboData, file) => {
             año: reciboData.año,
             monto: reciboData.monto,
             detalles: reciboData.detalles,
-            archivoURL: fileURL,
+            archivoURLs: fileURLs,  // Usamos un array de URLs de archivos
         };
 
         const docRef = await addDoc(collection(db, 'recibosSueldo'), nuevoRecibo);

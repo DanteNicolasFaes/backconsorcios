@@ -1,14 +1,25 @@
 import express from 'express';
-import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
+import authenticateUser from '../middleware/authenticatedUser.js'; 
 import verifyAdmin from '../middleware/verifyAdmin.js';
+import upload from '../middleware/upload.js';  // Este es el middleware de uploads
 import EdificiosManager from '../manager/EdificiosManager.js';
 
 const router = express.Router();
 
-// Ruta para crear un nuevo edificio
-router.post('/', authenticateUser, verifyAdmin, async (req, res) => {
+// Ruta para crear un nuevo edificio (incluyendo archivos)
+router.post('/', authenticateUser, verifyAdmin, upload.single('file'), async (req, res) => {
     try {
-        const nuevoEdificio = await EdificiosManager.crearEdificio(req.body);
+        const adminEmail = req.user.email;  // Obtener el email del administrador de la solicitud autenticada
+        const edificioData = req.body; // Los datos del edificio
+        const archivo = req.file;  // El archivo subido
+
+        // Si se subió un archivo, manejar su almacenamiento o URL
+        if (archivo) {
+            // Puedes agregar lógica para guardar la URL del archivo (por ejemplo, en Firebase Storage)
+            edificioData.archivoUrl = archivo.path; // O cualquier cosa que necesites hacer con el archivo
+        }
+
+        const nuevoEdificio = await EdificiosManager.crearEdificio(edificioData, adminEmail);  // Pasamos el email del admin
         res.status(201).json(nuevoEdificio);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
@@ -36,9 +47,19 @@ router.get('/:id', authenticateUser, async (req, res) => {
 });
 
 // Ruta para actualizar un edificio
-router.put('/:id', authenticateUser, verifyAdmin, async (req, res) => {
+router.put('/:id', authenticateUser, verifyAdmin, upload.single('file'), async (req, res) => {
     try {
-        const edificioActualizado = await EdificiosManager.actualizarEdificio(req.params.id, req.body);
+        const edificioId = req.params.id;
+        const edificioData = req.body;
+        const archivo = req.file;
+
+        // Si se subió un archivo, manejar su almacenamiento o URL
+        if (archivo) {
+            // Puedes agregar lógica para guardar la URL del archivo (por ejemplo, en Firebase Storage)
+            edificioData.archivoUrl = archivo.path;
+        }
+
+        const edificioActualizado = await EdificiosManager.actualizarEdificio(edificioId, edificioData);
         res.status(200).json(edificioActualizado);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });

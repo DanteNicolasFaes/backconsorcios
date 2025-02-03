@@ -1,14 +1,22 @@
 import express from 'express';
-import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
+import authenticateUser from '../middleware/authenticatedUser.js'; 
 import verifyAdmin from '../middleware/verifyAdmin.js';
-import EncargadoManager from '../manager/EncargadoManager.js'; // Importar EncargadoManager
+import upload from '../middleware/upload.js';  // El middleware de uploads
+import EncargadoManager from '../manager/EncargadoManager.js'; 
 
 const router = express.Router();
 
-// Ruta para crear un nuevo encargado
-router.post('/', authenticateUser, verifyAdmin, async (req, res) => {
+// Ruta para crear un nuevo encargado (incluyendo archivo)
+router.post('/', authenticateUser, verifyAdmin, upload.single('file'), async (req, res) => {
     try {
-        const nuevoEncargado = await EncargadoManager.crearEncargado(req.body);
+        // Si se sube un archivo, se puede manejar aquí
+        const encargadoData = req.body;
+        if (req.file) {
+            // Se puede agregar la URL del archivo a los datos del encargado si se necesita
+            encargadoData.archivoUrl = req.file.path; // Esto asume que estás guardando la ruta del archivo
+        }
+
+        const nuevoEncargado = await EncargadoManager.crearEncargado(encargadoData);
         res.status(201).json(nuevoEncargado);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });
@@ -35,10 +43,16 @@ router.get('/:id', authenticateUser, async (req, res) => {
     }
 });
 
-// Ruta para actualizar un encargado
-router.put('/:id', authenticateUser, verifyAdmin, async (req, res) => {
+// Ruta para actualizar un encargado (incluyendo archivo)
+router.put('/:id', authenticateUser, verifyAdmin, upload.single('file'), async (req, res) => {
     try {
-        const encargadoActualizado = await EncargadoManager.actualizarEncargado(req.params.id, req.body);
+        const encargadoData = req.body;
+        if (req.file) {
+            // Si se sube un archivo, se puede manejar aquí
+            encargadoData.archivoUrl = req.file.path; // Se agrega la URL del archivo actualizado
+        }
+
+        const encargadoActualizado = await EncargadoManager.actualizarEncargado(req.params.id, encargadoData);
         res.status(200).json(encargadoActualizado);
     } catch (error) {
         res.status(500).json({ mensaje: error.message });

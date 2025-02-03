@@ -1,4 +1,4 @@
-import { db } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
+import { db } from '../firebaseConfig.js';
 import { collection, addDoc, getDocs, doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { uploadAndStoreUrls } from '../middleware/uploads.js'; // Importar la función que maneja las URLs de los archivos
 

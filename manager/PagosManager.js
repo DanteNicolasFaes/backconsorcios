@@ -1,5 +1,5 @@
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'; // Importar funciones de Storage
-import { db, storage } from '../firebaseConfig.js'; // Usa la configuración centralizada de Firebase
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'; 
+import { db, storage } from '../firebaseConfig.js'; 
 import { collection, addDoc, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 
 class PagosManager {
@@ -9,6 +9,10 @@ class PagosManager {
         this.validarAcceso(esAdmin);
 
         this.validarPago(pago); // Validaciones
+
+        if (!archivo) {
+            throw new Error('El archivo es obligatorio para registrar el pago.');
+        }
 
         try {
             // Subir archivo a Firebase Storage

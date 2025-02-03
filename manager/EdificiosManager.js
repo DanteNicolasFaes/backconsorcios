@@ -5,9 +5,12 @@ import UsuariosManager from './UsuariosManager.js'; // Importar UsuariosManager 
 
 class EdificiosManager {
     // Método para crear un nuevo edificio
-    async crearEdificio(edificioData) {
+    async crearEdificio(edificioData, adminEmail) {
         const nuevoEdificio = await addDoc(collection(db, 'edificios'), edificioData);
-        await enviarNotificacionEdificio(edificioData.email, 'Nuevo Edificio Creado', 'Se ha creado un nuevo edificio.');
+
+        // Enviar notificación solo al administrador
+        await enviarNotificacionEdificio(adminEmail, 'Nuevo Edificio Creado', 'Se ha creado un nuevo edificio.');
+
         return { id: nuevoEdificio.id, ...edificioData };
     }
 

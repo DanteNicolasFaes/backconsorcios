@@ -1,26 +1,22 @@
 import express from 'express';
-import multer from 'multer';
 import InvitacionesManager from '../manager/InvitacionesManager.js';
-import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
+import authenticateUser from '../middleware/authenticatedUser.js';
 import verifyAdmin from '../middleware/verifyAdmin.js';
-
-// Configuración de Multer para manejar la carga de archivos
-const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
-const upload = multer({ storage });
+import { upload, uploadAndStoreUrls } from '../middleware/upload.js';  // Importar el middleware
 
 const router = express.Router();
 
 // Ruta para crear una nueva invitación
-router.post('/', authenticateUser, verifyAdmin, upload.array('archivos', 10), async (req, res) => { // Permitir hasta 10 archivos
+router.post('/', authenticateUser, verifyAdmin, upload, uploadAndStoreUrls, async (req, res) => {
     try {
         const datosInvitacion = {
             ...req.body,
-            archivos: req.files // Los archivos subidos (si existen)
+            archivos: req.fileUrls || []  // Si se subieron archivos, guardar las URLs
         };
 
         // Crear la invitación en el sistema
-        const nuevaInvitacion = await InvitacionesManager.crearInvitacion(datosInvitacion, req.user, req.files);
-        
+        const nuevaInvitacion = await InvitacionesManager.crearInvitacion(datosInvitacion, req.user, req.fileUrls);
+
         // Generar el mensaje con el enlace de registro utilizando el token de la invitación
         const mensaje = `¡Hola! Has recibido una invitación para unirte al software de administración de consorcios. 
                          Por favor, regístrate en el siguiente enlace: https://tuapp.com/registro?invitacion=${nuevaInvitacion.token}`;

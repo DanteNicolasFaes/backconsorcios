@@ -1,13 +1,13 @@
 import express from 'express';
 import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
 import verifyAdmin from '../middleware/verifyAdmin.js';
-import { upload, uploadAndStoreUrls } from '../middleware/uploads.js';
+import { upload } from '../middleware/uploads.js';  // Ya no necesitas importar 'uploadAndStoreUrls' aquí
 import DocumentosManager from '../manager/DocumentosManager.js';
 
 const router = express.Router();
 
 // Ruta para subir un documento (ahora soporta múltiples archivos)
-router.post('/', authenticateUser, verifyAdmin, upload, uploadAndStoreUrls, async (req, res) => {
+router.post('/', authenticateUser, verifyAdmin, upload, async (req, res) => {
     try {
         if (!req.fileUrls || req.fileUrls.length === 0) {
             // Error explícito si no se suben archivos
@@ -50,7 +50,7 @@ router.get('/:id', authenticateUser, async (req, res) => {
 });
 
 // Ruta para actualizar un documento (soporta múltiples archivos)
-router.put('/:id', authenticateUser, verifyAdmin, upload, uploadAndStoreUrls, async (req, res) => {
+router.put('/:id', authenticateUser, verifyAdmin, upload, async (req, res) => {
     try {
         const archivos = req.fileUrls;  // Nuevas URLs de los archivos subidos
         const datosActualizados = req.body;  // Otros datos a actualizar

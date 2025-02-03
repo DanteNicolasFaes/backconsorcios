@@ -3,9 +3,13 @@ import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from '
 
 class UsuariosManager {
     // Método para crear un nuevo usuario
-    async crearUsuario(usuarioData, usuarioAutenticado, archivos) {
+    async crearUsuario(usuarioData, usuarioAutenticado) {
         if (!usuarioAutenticado.isAdmin) {
             throw new Error('Acceso denegado. Solo los administradores pueden crear usuarios.');
+        }
+        // Si hay archivos, incluir las URLs en los datos del usuario
+        if (usuarioData.archivos && usuarioData.archivos.length > 0) {
+            usuarioData.archivos = usuarioData.archivos.map(url => ({ url }));
         }
         const nuevoUsuario = await addDoc(collection(db, 'usuarios'), usuarioData);
         return { id: nuevoUsuario.id, ...usuarioData };
@@ -34,9 +38,13 @@ class UsuariosManager {
     }
 
     // Método para actualizar un usuario
-    async actualizarUsuario(usuarioId, usuarioData, usuarioAutenticado, archivos) {
+    async actualizarUsuario(usuarioId, usuarioData, usuarioAutenticado) {
         if (!usuarioAutenticado.isAdmin) {
             throw new Error('Acceso denegado. Solo los administradores pueden actualizar usuarios.');
+        }
+        // Si hay archivos, incluir las URLs en los datos del usuario
+        if (usuarioData.archivos && usuarioData.archivos.length > 0) {
+            usuarioData.archivos = usuarioData.archivos.map(url => ({ url }));
         }
         const usuarioRef = doc(db, 'usuarios', usuarioId);
         await updateDoc(usuarioRef, usuarioData);

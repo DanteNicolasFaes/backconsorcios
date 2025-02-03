@@ -1,12 +1,8 @@
 import express from 'express';
-import multer from 'multer';
 import { crearReciboSueldo, obtenerRecibosPorEncargadoId } from '../manager/RecibosSueldoManager.js';
-import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
+import authenticateUser from '../middleware/authenticatedUser.js'; 
 import verifyAdmin from '../middleware/verifyAdmin.js';
-
-// Configuración de Multer para manejar la carga de archivos
-const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
-const upload = multer({ storage });
+import { upload, uploadAndStoreUrls } from '../middleware/uploadMiddleware.js';  // Traemos el middleware correctamente
 
 // Middleware de validación para los datos del recibo de sueldo
 const validateReciboData = (req, res, next) => {
@@ -23,13 +19,12 @@ const validateReciboData = (req, res, next) => {
 const router = express.Router();
 
 // Ruta para crear un nuevo recibo de sueldo para un encargado
-router.post('/:encargadoId', authenticateUser, verifyAdmin, upload.array('archivos', 10), validateReciboData, async (req, res) => {
+router.post('/:encargadoId', authenticateUser, verifyAdmin, upload, uploadAndStoreUrls, validateReciboData, async (req, res) => {
     try {
-        // Obtener los archivos subidos
-        const archivos = req.files || [];
+        const archivoUrls = req.fileUrls;  // URLs de los archivos subidos
 
         // Llamar a la función del manager para crear el recibo
-        const reciboId = await crearReciboSueldo(req.params.encargadoId, req.body, archivos);
+        const reciboId = await crearReciboSueldo(req.params.encargadoId, req.body, archivoUrls);
 
         res.status(201).json({ message: 'Recibo de sueldo creado con éxito', reciboId });
     } catch (error) {

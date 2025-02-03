@@ -1,12 +1,9 @@
 import express from 'express';
 import multer from 'multer';
 import PagosManager from '../manager/PagosManager.js';
-import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
+import authenticateUser from '../middleware/authenticatedUser.js'; 
 import verifyAdmin from '../middleware/verifyAdmin.js';
-
-// Configuración de Multer para manejo de archivos
-const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
-const upload = multer({ storage });
+import upload from '../middleware/uploads.js'; // Asumo que 'uploads' es tu middleware para manejar archivos
 
 const router = express.Router();
 

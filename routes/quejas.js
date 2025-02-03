@@ -1,74 +1,94 @@
-import express from 'express';
-import multer from 'multer';
-import QuejasManager from '../manager/QuejasManager.js';
-import authenticateUser from '../middleware/authenticatedUser.js'; // Asegúrate de que el nombre del archivo sea correcto
-import verifyAdmin from '../middleware/verifyAdmin.js';
+import { Router } from 'express';
+import { authenticateUser } from '../middleware/authenticate.js';  // Middleware de autenticación
+import { upload, uploadAndStoreUrls } from '../middleware/uploads.js';  // Middleware para manejar los archivos
+import QuejasManager from '../manager/QuejasManager.js';  // El manager para manejar las quejas
 
-// Configuración de Multer para manejo de archivos
-const storage = multer.memoryStorage(); // Usamos memoria temporal en lugar de disco
-const upload = multer({ storage });
+const router = Router();
 
-const router = express.Router();
-
-// Ruta para crear una nueva queja
-router.post('/', authenticateUser, upload.array('documentos', 10), async (req, res) => {
+// Ruta para crear una nueva queja (POST)
+router.post('/', authenticateUser, upload, uploadAndStoreUrls, async (req, res) => {
     try {
-        // Extraemos los valores necesarios del cuerpo de la solicitud
+        // Extraemos los datos del cuerpo de la solicitud
         const { contenido, unidadFuncionalId } = req.body;
-        const archivos = req.files;  // Los archivos se guardan en `req.files`
-        const esPropietario = req.user.role === 'propietario' || req.user.role === 'inquilino';  // Verificamos que el usuario sea propietario o inquilino
+        const archivos = req.fileUrls;  // Las URLs de los archivos subidos a Firebase
+        const esPropietario = req.user.role === 'propietario' || req.user.role === 'inquilino';  // Verificación del rol
 
-        // Llamamos a `crearQueja` del `QuejasManager`, pasándole los datos necesarios
+        // Llamamos al método de QuejasManager para crear la queja
         const queja = await QuejasManager.crearQueja({ contenido }, archivos, unidadFuncionalId, esPropietario);
 
-        res.status(201).json({ message: 'Queja creada con éxito', queja });  // Enviamos una respuesta exitosa con la queja creada
+        // Respondemos con el mensaje de éxito y la queja creada
+        res.status(201).json({ message: 'Queja creada con éxito', queja });
     } catch (error) {
-        res.status(400).json({ message: error.message });  // Si hay un error, devolvemos el mensaje de error
-    }
-});
-
-// Ruta para responder a una queja (solo para administradores)
-router.put('/:id/responder', authenticateUser, verifyAdmin, async (req, res) => {
-    const { respuesta } = req.body;
-    const { id } = req.params;
-
-    try {
-        const resultado = await QuejasManager.responderQueja(id, respuesta, req.user.isAdmin);
-        res.status(200).json({ message: resultado.message });
-    } catch (error) {
+        // Si ocurre un error, respondemos con un mensaje de error
         res.status(400).json({ message: error.message });
     }
 });
 
-// Ruta para eliminar una queja (solo para administradores)
-router.delete('/:id', authenticateUser, verifyAdmin, async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const resultado = await QuejasManager.eliminarQueja(id, req.user.isAdmin);
-        res.status(200).json({ message: resultado.message });
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-
-// Ruta para obtener todas las quejas
+// Ruta para obtener todas las quejas (GET)
 router.get('/', authenticateUser, async (req, res) => {
     try {
+        // Llamamos al método de QuejasManager para obtener todas las quejas
         const quejas = await QuejasManager.obtenerQuejas();
-        res.status(200).json(quejas);
+
+        // Respondemos con las quejas obtenidas
+        res.status(200).json({ quejas });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        // Si ocurre un error, respondemos con un mensaje de error
+        res.status(400).json({ message: error.message });
     }
 });
 
-// Ruta para obtener una queja específica por ID
+// Ruta para obtener una queja por su ID (GET)
 router.get('/:id', authenticateUser, async (req, res) => {
     try {
-        const queja = await QuejasManager.obtenerQuejaPorId(req.params.id);
-        res.status(200).json(queja);
+        const { id } = req.params;  // Obtenemos el ID de la queja desde los parámetros de la URL
+        const queja = await QuejasManager.obtenerQuejaPorId(id);  // Llamamos al método para obtener la queja
+
+        if (!queja) {
+            return res.status(404).json({ message: 'Queja no encontrada' });
+        }
+
+        // Respondemos con la queja encontrada
+        res.status(200).json({ queja });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        // Si ocurre un error, respondemos con un mensaje de error
+        res.status(400).json({ message: error.message });
+    }
+});
+
+// Ruta para actualizar una queja (PUT)
+router.put('/:id', authenticateUser, upload, uploadAndStoreUrls, async (req, res) => {
+    try {
+        const { id } = req.params;  // Obtenemos el ID de la queja desde los parámetros de la URL
+        const { contenido, unidadFuncionalId } = req.body;
+        const archivos = req.fileUrls;  // Las URLs de los archivos subidos a Firebase
+        const esPropietario = req.user.role === 'propietario' || req.user.role === 'inquilino';  // Verificación del rol
+
+        // Llamamos al método de QuejasManager para actualizar la queja
+        const queja = await QuejasManager.actualizarQueja(id, { contenido, unidadFuncionalId }, archivos);
+
+        // Respondemos con el mensaje de éxito
+        res.status(200).json({ message: 'Queja actualizada con éxito', queja });
+    } catch (error) {
+        // Si ocurre un error, respondemos con un mensaje de error
+        res.status(400).json({ message: error.message });
+    }
+});
+
+// Ruta para eliminar una queja (DELETE)
+router.delete('/:id', authenticateUser, async (req, res) => {
+    try {
+        const { id } = req.params;  // Obtenemos el ID de la queja desde los parámetros de la URL
+        const esAdmin = req.user.role === 'admin';  // Verificación del rol de administrador
+
+        // Llamamos al método de QuejasManager para eliminar la queja
+        const response = await QuejasManager.eliminarQueja(id, esAdmin);
+
+        // Respondemos con el mensaje de éxito
+        res.status(200).json(response);
+    } catch (error) {
+        // Si ocurre un error, respondemos con un mensaje de error
+        res.status(400).json({ message: error.message });
     }
 });
 
